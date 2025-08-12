@@ -5,6 +5,7 @@ import sys
 import json
 import tempfile
 import importlib.util
+import io
 
 # Mock llm_client before importing mail_classify
 # This avoids ImportError if llm_client or its dependencies are not installed
@@ -55,7 +56,7 @@ This is a test body.
             classifier = mail_classify.EmailClassifier(debug=False)
 
             # Act
-            with patch('sys.stdout', new_callable=unittest.mock.StringIO) as mock_stdout:
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
                 result = classifier.run()
 
         # Assert
