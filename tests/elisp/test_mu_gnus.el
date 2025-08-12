@@ -85,6 +85,6 @@
               (with-redefs (shell-command-to-string #'mock-shell-command-to-string)
                 (with-redefs (shell-command #'mock-shell-command)
                   (mu-gnus-add-to-db)
-                  (should (string= last-shell-command "bin/mail-db add '<new@msg.com>' --from 'Test From <from@example.com>' --subject 'Test Subject' --classification 'important'"))))))))))
+                  (should (string= last-shell-command "bin/mail-db add '<new@msg.com>' --from 'Test From <from@example.com>' --subject 'Test Subject' --classification 'important'")))))))))))
 
 ;;; test_mu_gnus.el ends here
