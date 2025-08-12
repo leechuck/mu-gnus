@@ -77,12 +77,11 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
 
 (ert-deftest mu-gnus-get-message-id-test ()
   "Test extraction of Message-ID."
-  (let ((gnus-summary-buffer (get-buffer-create "test-summary-buffer")))
-    (with-redefs ((gnus-summary-article-header . (lambda () 'dummy-header))
-                  (mail-header-id . (lambda (_header) "<the-id@domain.com>")))
-      (unwind-protect
-          (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>"))
-        (kill-buffer gnus-summary-buffer)))))
+  (with-temp-buffer
+    (let ((gnus-summary-buffer (current-buffer)))
+      (with-redefs ((gnus-summary-article-header . (lambda () 'dummy-header))
+                    (mail-header-id . (lambda (_header) "<the-id@domain.com>")))
+        (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>"))))))
 
 (defvar last-shell-command nil)
 (defun mock-shell-command (command &optional output-buffer error-buffer)
