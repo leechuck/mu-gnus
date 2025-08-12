@@ -77,28 +77,12 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
 
 (ert-deftest mu-gnus-get-message-id-test ()
   "Test extraction of Message-ID."
-  ;; Create a mock buffer to act as gnus-summary-buffer
-  (with-temp-buffer
-    (let ((test-buffer (current-buffer))
-          (gnus-summary-buffer (current-buffer))
-          (old-gnus-summary-article-header (and (fboundp 'gnus-summary-article-header)
-                                                (symbol-function 'gnus-summary-article-header)))
-          (old-mail-header-id (and (fboundp 'mail-header-id)
-                                  (symbol-function 'mail-header-id))))
+  (let ((gnus-summary-buffer (get-buffer-create "test-summary-buffer")))
+    (with-redefs ((gnus-summary-article-header . (lambda () 'dummy-header))
+                  (mail-header-id . (lambda (_header) "<the-id@domain.com>")))
       (unwind-protect
-          (progn
-            ;; Mock the functions globally so they work in any buffer context
-            (fset 'gnus-summary-article-header (lambda () 'dummy-header))
-            (fset 'mail-header-id (lambda (header) "<the-id@domain.com>"))
-            ;; Now call the function
-            (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>")))
-        ;; Restore original functions
-        (if old-gnus-summary-article-header
-            (fset 'gnus-summary-article-header old-gnus-summary-article-header)
-          (fmakunbound 'gnus-summary-article-header))
-        (if old-mail-header-id
-            (fset 'mail-header-id old-mail-header-id)
-          (fmakunbound 'mail-header-id))))))
+          (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>"))
+        (kill-buffer gnus-summary-buffer)))))
 
 (defvar last-shell-command nil)
 (defun mock-shell-command (command &optional output-buffer error-buffer)
