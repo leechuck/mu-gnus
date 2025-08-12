@@ -1,6 +1,6 @@
 # Makefile for the mail assistant project
 
-.PHONY: all test install clean test-mail-process
+.PHONY: all test test-c test-python test-elisp test-llm install clean test-mail-process
 
 # Variables
 CC = gcc
@@ -37,15 +37,25 @@ $(BUILDDIR)/mail-process: $(SRCDIR)/mail-process.c
 $(BUILDDIR)/mail-extract: $(SRCDIR)/mail-extract.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-# Test target
-test: all
+# Test targets
+test: test-c test-python test-elisp test-llm
+	@echo "All tests finished."
+
+test-c: all
 	@echo "Running C tests..."
 	@if [ -f tests/c/run_tests.sh ]; then chmod +x tests/c/run_tests.sh && ./tests/c/run_tests.sh; fi
 	@if [ -f tests/c/test_mail_db.sh ]; then chmod +x tests/c/test_mail_db.sh && ./tests/c/test_mail_db.sh; fi
 	@if [ -f tests/c/test_mail_process.sh ]; then chmod +x tests/c/test_mail_process.sh && ./tests/c/test_mail_process.sh; fi
-	@echo "Running Python tests..."
-	@if [ -f tests/python/test_new_classify.py ]; then cd tests/python && python3 test_new_classify.py; fi
+
+test-python:
+	@echo "Running Python tests (non-LLM)..."
 	@if [ -f tests/python/test_mail_to_org.py ]; then cd tests/python && python3 test_mail_to_org.py; fi
+
+test-llm:
+	@echo "Running Python LLM tests..."
+	@if [ -f tests/python/test_new_classify.py ]; then cd tests/python && python3 test_new_classify.py; fi
+
+test-elisp:
 	@echo "Running Elisp tests..."
 	@if [ -f tests/elisp/test_mu_gnus.el ]; then \
 		if emacs -batch -l ert -l tests/elisp/test_mu_gnus.el -f ert-run-tests-batch-and-exit; then \
@@ -54,7 +64,6 @@ test: all
 			exit 1; \
 		fi; \
 	fi
-	@echo "All tests finished."
 
 # Test mail-process specifically (quick test)
 test-mail-process: $(BUILDDIR)/mail-process $(BUILDDIR)/mail-db
