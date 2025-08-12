@@ -54,18 +54,19 @@ char* extract_json_value(const char* json_str, const char* key) {
     char* value = malloc(value_len + 1);
     if (!value) return NULL;
 
-    strncpy(value, value_start, value_len);
-    value[value_len] = '\0';
-
-    // Basic un-escaping for common characters, can be expanded
-    char *p, *q;
-    for (p = value, q = value; *p; p++) {
-        if (*p == '\\' && *(p+1) != '\0') {
-            p++; // Skip the backslash
+    // Copy and un-escape in one pass
+    const char *src = value_start;
+    char *dst = value;
+    while (src < value_end) {
+        if (*src == '\\' && (src + 1) < value_end) {
+            // Skip the backslash and copy the next character
+            src++;
+            *dst++ = *src++;
+        } else {
+            *dst++ = *src++;
         }
-        *q++ = *p;
     }
-    *q = '\0';
+    *dst = '\0';
 
     return value;
 }
