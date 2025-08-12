@@ -25,6 +25,9 @@ api_key =
 ; Default for ollama: http://localhost:11434
 ; Default for gpt4all: http://localhost:4891
 api_url =
+; Optional parameters for API-based LLMs.
+max_tokens =
+temperature =
 
 [classification]
 ; Comma-separated list of categories.
