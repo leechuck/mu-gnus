@@ -404,7 +404,8 @@ Subject: Empty
 
         # Assert
         mock_get_config.assert_called_once()
-        mock_config_instance.get_org_template.assert_called_once()
+        # When CLI arg is provided, config should not be consulted for the template
+        mock_config_instance.get_org_template.assert_not_called()
         mock_EmailToOrg.assert_called_once_with(template_file='/path/to/cli_template.org', scheduled=False)
         mock_converter_instance.run.assert_called_once()
 
