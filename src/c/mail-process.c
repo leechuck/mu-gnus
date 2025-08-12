@@ -11,6 +11,7 @@
 
 #define MAX_EMAIL_SIZE (10 * 1024 * 1024) // 10MB
 #define MAX_LINE_LENGTH 4096
+#define MAX_JSON_SIZE 2048
 
 // Helper to extract a value for a key from a JSON string.
 // Returns a dynamically allocated string that must be freed.
@@ -119,7 +120,8 @@ char* extract_header(const char* email_content, const char* header_name) {
             // Folded line
             char *current_value = trim_whitespace(line);
             size_t current_len = strlen(current_value);
-            char *new_value = realloc(value, value_size + 1 + current_len); // +1 for space
+            size_t new_size = value_size + 1 + current_len;
+            char *new_value = realloc(value, new_size);
             if (!new_value) {
                 free(value);
                 return NULL;
@@ -127,7 +129,7 @@ char* extract_header(const char* email_content, const char* header_name) {
             value = new_value;
             strcat(value, " ");
             strcat(value, current_value);
-            value_size += 1 + current_len;
+            value_size = new_size;
         } else if (found) {
             // Next header, so we are done with the current one.
             break;
@@ -159,7 +161,7 @@ char* read_email() {
 // Calls mail-classify.py to get the classification as a JSON string.
 // Returns a dynamically allocated string with the JSON.
 char* classify_email(const char* email_content) {
-    char *classification_json = malloc(2048); // Increased size for JSON
+    char *classification_json = malloc(MAX_JSON_SIZE);
     if (!classification_json) return NULL;
     // Default JSON in case of error
     strcpy(classification_json, "{\"category\": \"automated\", \"error\": \"classification failed\"}");
@@ -204,10 +206,19 @@ char* classify_email(const char* email_content) {
         close(to_child_pipe[0]);
         close(from_child_pipe[1]);
 
-        write(to_child_pipe[1], email_content, strlen(email_content));
+        size_t email_len = strlen(email_content);
+        size_t written = 0;
+        while (written < email_len) {
+            ssize_t result = write(to_child_pipe[1], email_content + written, email_len - written);
+            if (result < 0) {
+                perror("write to child");
+                break;
+            }
+            written += result;
+        }
         close(to_child_pipe[1]);
 
-        char buffer[2048]; // Increased size for JSON
+        char buffer[MAX_JSON_SIZE];
         ssize_t count = read(from_child_pipe[0], buffer, sizeof(buffer) - 1);
         if (count > 0) {
             buffer[count] = '\0';
@@ -215,8 +226,8 @@ char* classify_email(const char* email_content) {
             // We just copy it as is.
             char *trimmed_output = trim_whitespace(buffer);
             if (strlen(trimmed_output) > 0) {
-                strncpy(classification_json, trimmed_output, 2047);
-                classification_json[2047] = '\0';
+                strncpy(classification_json, trimmed_output, MAX_JSON_SIZE - 1);
+                classification_json[MAX_JSON_SIZE - 1] = '\0';
             }
         }
         close(from_child_pipe[0]);

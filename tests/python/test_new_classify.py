@@ -13,10 +13,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 mock_llm_client_module = MagicMock()
 sys.modules['llm_client'] = mock_llm_client_module
 
-# We need to reload mail_classify to make it use the mock
-import importlib
+# Import mail_classify after mocking llm_client
 import mail_classify
-importlib.reload(mail_classify)
 
 class TestNewEmailClassifier(unittest.TestCase):
 
@@ -34,7 +32,6 @@ This is a test body.
         # Reset mocks before each test
         self.mock_llm_client_instance.reset_mock()
         mock_llm_client_module.LLMClient.reset_mock()
-
 
     @patch('sys.stdin')
     def test_classification_json_output(self, mock_stdin):
@@ -79,7 +76,7 @@ This is a test body.
 
         try:
             # Arrange
-            self.mock_llm_client_instance.complete.return_value = '{}'
+            self.mock_llm_client_instance.complete.return_value = {"category": "automated", "urgency": "low", "sender_type": "system"}
             classifier = mail_classify.EmailClassifier(prompt_file=prompt_path)
             
             email_data = {
