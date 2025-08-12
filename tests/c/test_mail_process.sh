@@ -59,7 +59,7 @@ Content-Type: text/plain
 This is an automated system notification.
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"automated\", \"urgency\": \"low\", \"sender_type\": \"system\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -89,7 +89,7 @@ This is an important message about the project deadline.
 Please respond immediately.
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo important" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"important\", \"urgency\": \"high\", \"sender_type\": \"person\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -117,7 +117,7 @@ Welcome to our weekly newsletter!
 Here are this week's top stories...
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"newsletter\", \"urgency\": \"low\", \"sender_type\": \"company\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -145,7 +145,7 @@ Someone just followed you on Social Network.
 Check out their profile!
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo social" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"social\", \"urgency\": \"low\", \"sender_type\": \"person\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -188,6 +188,20 @@ else
     exit 1
 fi
 
+# Test 6b: Verify JSON fields are stored for important email
+echo -n "Test 6b: Verify JSON fields are stored... "
+DB_OUTPUT=$($MAIL_DB query --classification important --db "$TEST_DB" 2>/dev/null)
+
+if echo "$DB_OUTPUT" | grep -q '"urgency": "high"' && \
+   echo "$DB_OUTPUT" | grep -q '"sender_type": "person"'; then
+    echo -e "${GREEN}PASS${NC}"
+else
+    echo -e "${RED}FAIL${NC}"
+    echo "  Database output for important email did not contain correct JSON fields:"
+    echo "$DB_OUTPUT"
+    exit 1
+fi
+
 # Test 7: Process email with existing X-Label (should not duplicate)
 echo -n "Test 7: Process email with existing X-Label... "
 cat > "$TEST_EMAIL" << 'EOF'
@@ -201,7 +215,7 @@ Date: Fri, 5 Jan 2024 15:00:00 +0000
 This email already has an X-Label header.
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
+MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"newsletter\", \"urgency\": \"low\", \"sender_type\": \"company\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null || true
 
 # Count X-Label headers
@@ -237,7 +251,7 @@ Content-Type: text/html
 --boundary123--
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"automated\", \"urgency\": \"low\", \"sender_type\": \"system\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -265,7 +279,7 @@ Date: Sun, 7 Jan 2024 17:00:00 +0000
 Testing special characters in headers.
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"automated\", \"urgency\": \"low\", \"sender_type\": \"system\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -292,7 +306,7 @@ Date: Mon, 8 Jan 2024 18:00:00 +0000
 This email has no Message-ID header.
 EOF
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"automated\", \"urgency\": \"low\", \"sender_type\": \"system\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -325,7 +339,7 @@ for i in {1..5000}; do
     echo "This is line $i of a large email. It contains some text to make the email bigger." >> "$TEST_EMAIL"
 done
 
-if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"newsletter\", \"urgency\": \"low\", \"sender_type\": \"company\"}"' \
     timeout 5 $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
     EXIT_CODE=0
 else
@@ -356,7 +370,7 @@ Line 3 with unicode: café résumé
 Last line of the body.
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"automated\", \"urgency\": \"low\", \"sender_type\": \"system\"}"' \
     $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null || true
 
 # Check if body is preserved
@@ -416,7 +430,7 @@ done
 
 # Process multiple emails concurrently
 for i in {1..5}; do
-    (MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+    (MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD='echo "{\"category\": \"automated\", \"urgency\": \"low\", \"sender_type\": \"system\"}"' \
         $MAIL_PROCESS < "/tmp/test_email_$i.txt" > "/tmp/test_output_$i.txt" 2>/dev/null) &
 done
 
