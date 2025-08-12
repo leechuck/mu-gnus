@@ -4,6 +4,7 @@
 (require 'gnus-sum)
 (require 'gnus-art)
 (require 'json)
+(require 'org)
 
 (defun mail-assistant-get-config-value (key)
   "Get a configuration value from config.ini using mail-analyze."
@@ -94,8 +95,86 @@
     ;; Move point to message body (after headers)
     (message-goto-body)))
 
+(defun mail-assistant-get-message-id-from-org ()
+  "Get MESSAGE_ID property from current org heading."
+  (org-entry-get nil "MESSAGE_ID"))
+
+(defun mail-assistant-extract-response-from-org ()
+  "Extract text between #+BEGIN_SRC and #+END_SRC under My Response."
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((end (save-excursion (org-end-of-subtree t t) (point)))
+          response-text)
+      (when (re-search-forward "^\\*\\* My Response" end t)
+        (when (re-search-forward "^#\\+BEGIN_SRC text" end t)
+          (forward-line)
+          (let ((src-start (point)))
+            (when (re-search-forward "^#\\+END_SRC" end t)
+              (forward-line -1)
+              (end-of-line)
+              (setq response-text (buffer-substring-no-properties src-start (point)))))))
+      response-text)))
+
+(defun mail-assistant-get-original-email (message-id)
+  "Get original email from Gnus using message-id."
+  (let ((original-buffer (current-buffer))
+        email-content)
+    (save-window-excursion
+      (gnus)
+      (when (and gnus-newsgroup-name
+                 (gnus-summary-goto-article message-id nil t))
+        (gnus-summary-select-article)
+        (with-current-buffer gnus-article-buffer
+          (setq email-content (buffer-substring-no-properties (point-min) (point-max))))))
+    (switch-to-buffer original-buffer)
+    email-content))
+
+(defun mail-assistant-draft-reply-from-org ()
+  "Generate draft reply using LLM based on org entry."
+  (let ((message-id (mail-assistant-get-message-id-from-org))
+        (response-text (mail-assistant-extract-response-from-org))
+        original-email draft-output)
+    (when (and message-id response-text)
+      ;; Get original email
+      (setq original-email (mail-assistant-get-original-email message-id))
+      (when original-email
+        ;; Save to temp files
+        (let ((email-file (make-temp-file "mail-original-" nil ".txt"))
+              (response-file (make-temp-file "mail-response-" nil ".txt")))
+          (with-temp-file email-file
+            (insert original-email))
+          (with-temp-file response-file
+            (insert response-text))
+          ;; Call mail-draft-reply
+          (setq draft-output
+                (shell-command-to-string
+                 (format "mail-draft-reply --original %s --response %s"
+                         email-file response-file)))
+          ;; Clean up temp files
+          (delete-file email-file)
+          (delete-file response-file)
+          draft-output)))))
+
+(defun mail-assistant-insert-draft-and-reply ()
+  "Generate draft reply and insert into Gnus reply window."
+  (interactive)
+  (let ((draft (mail-assistant-draft-reply-from-org))
+        (message-id (mail-assistant-get-message-id-from-org)))
+    (if (and draft message-id)
+        (progn
+          ;; Open reply window
+          (mail-assistant-reply-all message-id)
+          ;; Insert draft
+          (insert draft)
+          (message "Draft inserted, review and send"))
+      (message "Could not generate draft - check MESSAGE_ID and response text"))))
+
 ;; Add to gnus article prepare hook
 (add-hook 'gnus-article-prepare-hook 'mail-assistant-process-article)
+
+;; Bind key in org-mode
+(with-eval-after-load 'org
+  (define-key org-mode-map (kbd "C-c m r") 'mail-assistant-insert-draft-and-reply))
 
 (provide 'mail-assistant-core)
 
