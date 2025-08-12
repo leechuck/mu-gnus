@@ -23,9 +23,9 @@ $(BUILDDIR)/%: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 # Test target
-test:
+test: all
 	@echo "Running C tests..."
-	@# TODO: Add commands to run C tests from tests/c/
+	@if [ -f tests/c/test_mail_extract.sh ]; then chmod +x tests/c/test_mail_extract.sh && tests/c/test_mail_extract.sh; fi
 	@echo "Running Python tests..."
 	@# TODO: Add commands to run Python tests from tests/python/
 	@echo "Running Elisp tests..."
