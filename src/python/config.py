@@ -34,22 +34,24 @@ class MailConfig:
         
         # Validate LLM config
         llm_type = self.get('llm', 'type')
-        if llm_type not in ['cmd', 'ollama', 'openai']:
-            errors.append(f"[llm] type must be one of 'cmd', 'ollama', 'openai', but got '{llm_type}'")
-        
+        valid_llm_types = ['cmd', 'ollama', 'openai', 'openrouter', 'gpt4all']
+        if llm_type not in valid_llm_types:
+            errors.append(f"[llm] type must be one of 'cmd', 'ollama', 'openai', 'openrouter', 'gpt4all', but got '{llm_type}'")
+
         if llm_type == 'cmd':
             if not self.get('llm', 'command'):
                 errors.append("[llm] 'command' is required when type is 'cmd'")
-        elif llm_type == 'ollama':
-            if not self.get('llm', 'api_url'):
-                errors.append("[llm] 'api_url' is required when type is 'ollama'")
-            if not self.get('llm', 'model'):
-                errors.append("[llm] 'model' is required when type is 'ollama'")
-        elif llm_type == 'openai':
+        elif llm_type in ['openai', 'openrouter']:
             if not self.get('llm', 'api_key'):
-                errors.append("[llm] 'api_key' is required when type is 'openai'")
+                errors.append(f"[llm] 'api_key' is required when type is '{llm_type}'")
             if not self.get('llm', 'model'):
-                errors.append("[llm] 'model' is required when type is 'openai'")
+                errors.append(f"[llm] 'model' is required when type is '{llm_type}'")
+        elif llm_type in ['ollama', 'gpt4all']:
+            if not self.get('llm', 'model'):
+                errors.append(f"[llm] 'model' is required when type is '{llm_type}'")
+            if llm_type == 'ollama':
+                if not self.get('llm', 'api_url'):
+                    errors.append("[llm] 'api_url' is required when type is 'ollama'")
 
         # Validate paths
         if not self.get('paths', 'database'):
