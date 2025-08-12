@@ -13,6 +13,12 @@ import re
 import html
 import os
 
+# Ensure the config module can be found
+# This is needed when running the script directly
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import get_config
+
+
 class EmailToOrg:
     def __init__(self, template_file=None, scheduled=False):
         self.template_file = template_file
@@ -222,13 +228,16 @@ class EmailToOrg:
 
 def main():
     parser = argparse.ArgumentParser(description='Convert email to org-mode format')
-    parser.add_argument('--template', type=str, help='Path to custom org template file')
+    parser.add_argument('--template', type=str, help='Path to custom org template file (overrides config)')
     parser.add_argument('--scheduled', action='store_true', 
                        help='Add SCHEDULED: <today> to the org entry')
     
     args = parser.parse_args()
     
-    converter = EmailToOrg(template_file=args.template, scheduled=args.scheduled)
+    config = get_config()
+    template_file = args.template or config.get_org_template()
+    
+    converter = EmailToOrg(template_file=template_file, scheduled=args.scheduled)
     sys.exit(converter.run())
 
 if __name__ == '__main__':

@@ -10,6 +10,10 @@ import tempfile
 import email
 from email.message import EmailMessage
 
+# Add src/python to path to allow importing config
+SRC_PYTHON_PATH = os.path.join(os.path.dirname(__file__), '../../src/python')
+sys.path.insert(0, SRC_PYTHON_PATH)
+
 # Import the module under test
 spec = importlib.util.spec_from_file_location("mail_to_org", 
                                                os.path.join(os.path.dirname(__file__), 
@@ -357,6 +361,53 @@ Subject: Empty
             self.assertEqual(result, 1)
             # Verify that an error message was printed to stderr
             self.assertIn("No such file or directory", mock_stderr.getvalue())
+
+    @patch('mail_to_org.get_config')
+    @patch('mail_to_org.EmailToOrg')
+    def test_main_uses_config_template(self, mock_EmailToOrg, mock_get_config):
+        """Test that main function uses template from config."""
+        # Arrange
+        mock_config_instance = MagicMock()
+        mock_config_instance.get_org_template.return_value = '/path/to/template.org'
+        mock_get_config.return_value = mock_config_instance
+        
+        mock_converter_instance = MagicMock()
+        mock_EmailToOrg.return_value = mock_converter_instance
+
+        # Act
+        with patch.object(sys, 'argv', ['mail-to-org.py']):
+            with self.assertRaises(SystemExit):
+                mail_to_org.main()
+
+        # Assert
+        mock_get_config.assert_called_once()
+        mock_config_instance.get_org_template.assert_called_once()
+        mock_EmailToOrg.assert_called_once_with(template_file='/path/to/template.org', scheduled=False)
+        mock_converter_instance.run.assert_called_once()
+
+    @patch('mail_to_org.get_config')
+    @patch('mail_to_org.EmailToOrg')
+    def test_main_cli_overrides_config_template(self, mock_EmailToOrg, mock_get_config):
+        """Test that --template CLI arg overrides config."""
+        # Arrange
+        mock_config_instance = MagicMock()
+        mock_config_instance.get_org_template.return_value = '/path/to/config_template.org'
+        mock_get_config.return_value = mock_config_instance
+        
+        mock_converter_instance = MagicMock()
+        mock_EmailToOrg.return_value = mock_converter_instance
+
+        # Act
+        with patch.object(sys, 'argv', ['mail-to-org.py', '--template', '/path/to/cli_template.org']):
+            with self.assertRaises(SystemExit):
+                mail_to_org.main()
+
+        # Assert
+        mock_get_config.assert_called_once()
+        mock_config_instance.get_org_template.assert_called_once()
+        mock_EmailToOrg.assert_called_once_with(template_file='/path/to/cli_template.org', scheduled=False)
+        mock_converter_instance.run.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()
