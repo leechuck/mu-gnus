@@ -7,7 +7,7 @@ Reads configuration from config.ini file.
 import os
 import configparser
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 class MailConfig:
     """Configuration manager for mail assistant."""
@@ -23,6 +23,40 @@ class MailConfig:
         self.config_path = self._find_config_file(config_path)
         self._load_config()
         self._apply_defaults()
+        self.validate()
+
+    def validate(self) -> None:
+        """
+        Validate the configuration.
+        Raises ValueError if configuration is invalid.
+        """
+        errors: List[str] = []
+        
+        # Validate LLM config
+        llm_type = self.get('llm', 'type')
+        if llm_type not in ['cmd', 'ollama', 'openai']:
+            errors.append(f"[llm] type must be one of 'cmd', 'ollama', 'openai', but got '{llm_type}'")
+        
+        if llm_type == 'cmd':
+            if not self.get('llm', 'command'):
+                errors.append("[llm] 'command' is required when type is 'cmd'")
+        elif llm_type == 'ollama':
+            if not self.get('llm', 'api_url'):
+                errors.append("[llm] 'api_url' is required when type is 'ollama'")
+            if not self.get('llm', 'model'):
+                errors.append("[llm] 'model' is required when type is 'ollama'")
+        elif llm_type == 'openai':
+            if not self.get('llm', 'api_key'):
+                errors.append("[llm] 'api_key' is required when type is 'openai'")
+            if not self.get('llm', 'model'):
+                errors.append("[llm] 'model' is required when type is 'openai'")
+
+        # Validate paths
+        if not self.get('paths', 'database'):
+            errors.append("[paths] 'database' must be set")
+
+        if errors:
+            raise ValueError("Configuration validation failed:\n- " + "\n- ".join(errors))
     
     def _find_config_file(self, config_path: Optional[str] = None) -> Optional[Path]:
         """

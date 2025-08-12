@@ -18,19 +18,28 @@ from pathlib import Path
 try:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from llm_client import LLMClient
+    from config import get_config, MailConfig
     HAS_LLM_CLIENT = True
 except ImportError:
     HAS_LLM_CLIENT = False
 
 
 class EmailClassifier:
-    def __init__(self, debug=False, dry_run=False, prompt_file=None):
+    def __init__(self, config: MailConfig, debug=False, dry_run=False, prompt_file=None):
+        self.config = config
         self.debug = debug
         self.dry_run = dry_run
-        self.prompt_template = self._load_prompt_template(prompt_file)
         
+        # Use config values, with command-line arg for prompt_file as override
+        prompt_path_override = Path(prompt_file) if prompt_file else None
+        self.prompt_template = self._load_prompt_template(prompt_path_override)
+        
+        self.llm_type = self.config.get('llm', 'type')
+        self.llm_cmd = self.config.get('llm', 'command')
+        self.max_body_length = self.config.get_max_body_length()
+
         self.llm_client = None
-        if not dry_run and os.getenv("MAIL_LLM_TYPE") != "cmd":
+        if not dry_run and self.llm_type != "cmd":
             if not HAS_LLM_CLIENT:
                 raise ImportError("llm_client.py not found, which is required for classification.")
             try:
@@ -41,16 +50,15 @@ class EmailClassifier:
                 # Re-raise as a more informative error
                 raise RuntimeError(f"Failed to initialize LLM client: {e}") from e
 
-    def _load_prompt_template(self, prompt_file=None):
+    def _load_prompt_template(self, prompt_file_override=None):
         """Load prompt template from file or use default."""
-        if prompt_file and os.path.exists(prompt_file):
-            with open(prompt_file, 'r') as f:
-                return f.read()
-        
-        # Default prompt path relative to this script
-        default_prompt_path = Path(__file__).parent.parent.parent / "prompts" / "classify.txt"
-        if default_prompt_path.exists():
-            return default_prompt_path.read_text()
+        # Priority: 1. command-line override, 2. config file, 3. hardcoded
+        if prompt_file_override and prompt_file_override.exists():
+            return prompt_file_override.read_text()
+            
+        config_prompt_file = self.config.get_prompt_file()
+        if config_prompt_file and config_prompt_file.exists():
+            return config_prompt_file.read_text()
         
         # Fallback hardcoded prompt
         return """Classify this email into ONE category:
@@ -107,8 +115,8 @@ Respond in JSON: {"category": "...", "urgency": "...", "sender_type": "..."}
             except:
                 body = str(msg.get_payload())
         
-        # Truncate body to first 1000 chars
-        body = body[:1000] if body else ''
+        # Truncate body
+        body = body[:self.max_body_length] if body else ''
         
         return {
             'from': from_addr,
@@ -126,10 +134,10 @@ Respond in JSON: {"category": "...", "urgency": "...", "sender_type": "..."}
     
     def classify(self, prompt):
         """Call LLM and get classification result as JSON."""
-        if os.getenv("MAIL_LLM_TYPE") == "cmd":
-            cmd = os.getenv("MAIL_LLM_CMD")
+        if self.llm_type == "cmd":
+            cmd = self.llm_cmd
             if not cmd:
-                return {"category": "automated", "urgency": "low", "sender_type": "system", "error": "MAIL_LLM_TYPE is 'cmd' but MAIL_LLM_CMD is not set"}
+                return {"category": "automated", "urgency": "low", "sender_type": "system", "error": "LLM type is 'cmd' but 'command' is not set in config.ini"}
             try:
                 proc = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
                 return json.loads(proc.stdout)
@@ -193,18 +201,20 @@ def main():
     parser.add_argument('file', nargs='?', help='Email file to classify (default: stdin)')
     parser.add_argument('--debug', action='store_true', help='Show LLM prompt and debug info')
     parser.add_argument('--dry-run', action='store_true', help='Show prompt without calling LLM')
-    parser.add_argument('--prompt-file', help='Path to a custom prompt template file.')
+    parser.add_argument('--prompt-file', help='Path to a custom prompt template file (overrides config.ini).')
     
     args = parser.parse_args()
     
     try:
+        config = get_config()
         classifier = EmailClassifier(
+            config=config,
             debug=args.debug, 
             dry_run=args.dry_run, 
             prompt_file=args.prompt_file
         )
         classifier.run(args.file)
-    except (ImportError, RuntimeError) as e:
+    except (ImportError, RuntimeError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 

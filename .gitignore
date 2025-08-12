@@ -208,6 +208,8 @@ __marimo__/
 .aider*
 
 # Mail assistant project
+config.ini
+
 # C binaries
 bin/
 

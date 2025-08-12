@@ -28,8 +28,6 @@ sudo apt-get install python3-pip
 pip install requests
 ```
 
-You will also need to create a configuration file for the LLM client at `~/.mail-assistant/llm.conf`.
-
 ## Building
 
 The project uses a Makefile to manage compilation. To compile all C programs:
@@ -70,6 +68,22 @@ Ensure that `$HOME/.local/bin` is in your `PATH`. You can add it by adding this 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
+
+## Configuration
+
+The behavior of the C programs and Python scripts is controlled by a configuration file named `config.ini`.
+
+To get started, copy the example configuration file:
+
+```bash
+cp config.ini.example config.ini
+```
+
+Then, edit `config.ini` to suit your needs. The application searches for this file in the following locations, in order:
+1.  The current working directory (`./config.ini`)
+2.  `~/.config/mail-assistant/config.ini`
+
+The `config.ini` file contains settings for database paths, LLM providers, classification categories, and more. The `config.ini.example` file is commented to explain each setting.
 
 ## Usage
 
@@ -112,7 +126,7 @@ It uses `mail-classify.py` for classification and `mail-db` for database operati
 
 Classifies an email using an LLM. This script is intended to be called by `mail-process`.
 
-It relies on `llm_client.py` for LLM communication, which must be configured.
+It relies on `llm_client.py` for LLM communication.
 
 #### llm_client.py
 
@@ -122,20 +136,7 @@ A unified client for interacting with LLMs. It can be used from the command line
 echo "What is the capital of France?" | python3 src/python/llm_client.py
 ```
 
-It requires a configuration file at `~/.mail-assistant/llm.conf`. The file uses an INI format:
-
-```ini
-[llm]
-backend = ollama
-# For Ollama
-ollama_url = http://localhost:11434/api/generate
-ollama_model = llama3
-
-# For OpenAI
-# backend = openai
-# openai_api_key = sk-xxxxxxxxxx
-# openai_model = gpt-4
-```
+It is configured via the `[llm]` section in `config.ini`. See the Configuration section for details.
 
 #### mail-to-org.py
 
