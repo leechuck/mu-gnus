@@ -92,7 +92,9 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
     (with-redefs ((mu-gnus-get-message-id . (lambda () "<msg-to-mark@replied.com>"))
                   (shell-command . #'mock-shell-command))
       (mu-gnus-mark-replied)
-      (should (string= last-shell-command "bin/mail-db update '<msg-to-mark@replied.com>' --replied 1")))))
+      (should (string= last-shell-command
+                       (format "bin/mail-db update %s --replied 1"
+                               (shell-quote-argument "<msg-to-mark@replied.com>")))))))
 
 (defun mock-shell-command-to-string (command)
   (cond
@@ -115,6 +117,11 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
                   (shell-command-to-string . #'mock-shell-command-to-string)
                   (shell-command . #'mock-shell-command))
       (mu-gnus-add-to-db)
-      (should (string= last-shell-command "bin/mail-db add '<new@msg.com>' --from 'Test From <from@example.com>' --subject 'Test Subject' --classification 'important'")))))
+      (should (string= last-shell-command
+                       (format "bin/mail-db add %s --from %s --subject %s --classification %s"
+                               (shell-quote-argument "<new@msg.com>")
+                               (shell-quote-argument "Test From <from@example.com>")
+                               (shell-quote-argument "Test Subject")
+                               (shell-quote-argument "important")))))))
 
 ;;; test_mu_gnus.el ends here
