@@ -60,7 +60,7 @@ fi
 # Test 5: Extract headers as JSON
 DESCRIPTION="Extract headers as JSON"
 OUTPUT=$(cat "$SAMPLE_EMAIL" | "$MAIL_EXTRACT_BIN" --json)
-# Check if output contains expected headers (more flexible test)
+# Check if output contains expected headers with properly escaped quotes
 if echo "$OUTPUT" | grep -q '"From": "sender@example.com"' && \
    echo "$OUTPUT" | grep -q '"To": "recipient@example.com"' && \
    echo "$OUTPUT" | grep -q '"Subject": "Test Email"' && \

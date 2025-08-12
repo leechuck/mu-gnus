@@ -50,6 +50,42 @@ char *trim(char *str) {
     return start;
 }
 
+// Print a JSON-escaped string
+void print_json_string(const char *str) {
+    for (const char *p = str; *p; p++) {
+        switch (*p) {
+            case '"':
+                printf("\\\"");
+                break;
+            case '\\':
+                printf("\\\\");
+                break;
+            case '\b':
+                printf("\\b");
+                break;
+            case '\f':
+                printf("\\f");
+                break;
+            case '\n':
+                printf("\\n");
+                break;
+            case '\r':
+                printf("\\r");
+                break;
+            case '\t':
+                printf("\\t");
+                break;
+            default:
+                if (*p >= 0x20 && *p <= 0x7E) {
+                    putchar(*p);
+                } else {
+                    printf("\\u%04x", (unsigned char)*p);
+                }
+                break;
+        }
+    }
+}
+
 // Parse email from stdin
 Email *parse_email() {
     Email *email = malloc(sizeof(Email));
@@ -135,7 +171,11 @@ char *find_header(Email *email, const char *name) {
 void print_json(Email *email) {
     printf("{\n");
     for (int i = 0; i < email->header_count; i++) {
-        printf("  \"%s\": \"%s\"", email->headers[i].name, email->headers[i].value);
+        printf("  \"");
+        print_json_string(email->headers[i].name);
+        printf("\": \"");
+        print_json_string(email->headers[i].value);
+        printf("\"");
         if (i < email->header_count - 1) {
             printf(",");
         }
