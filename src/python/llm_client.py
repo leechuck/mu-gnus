@@ -14,7 +14,7 @@ from config import get_config, MailConfig
 class LLMClient(ABC):
     """Abstract base class for LLM clients."""
     @abstractmethod
-    def invoke(self, prompt: str) -> str:
+    def complete(self, prompt: str) -> str:
         """Invoke the LLM with a given prompt and return the response."""
         pass
 
@@ -25,7 +25,7 @@ class CmdClient(LLMClient):
         if not self.command:
             raise ValueError("LLM command is not configured for type 'cmd'.")
 
-    def invoke(self, prompt: str) -> str:
+    def complete(self, prompt: str) -> str:
         """Passes the prompt to the configured command via stdin."""
         try:
             process = subprocess.run(
@@ -76,7 +76,7 @@ class OpenAICompatibleClient(LLMClient):
         if self.api_url and not self.api_url.endswith('/chat/completions'):
             self.api_url = self.api_url.rstrip('/') + '/chat/completions'
 
-    def invoke(self, prompt: str) -> str:
+    def complete(self, prompt: str) -> str:
         """Sends a request to the OpenAI-compatible API."""
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -134,7 +134,7 @@ def main():
         # The get_config function will find the config file.
         config = get_config()
         client = get_llm_client(config)
-        response = client.invoke(prompt)
+        response = client.complete(prompt)
         print(response)
     except Exception as e:
         # Print error as JSON for programmatic use, to stdout.

@@ -66,7 +66,8 @@ test-python:
 
 test-llm:
 	@echo "Running Python LLM tests..."
-	@if [ -f tests/python/test_new_classify.py ]; then cd tests/python && python3 test_new_classify.py; fi
+	@if [ -f tests/python/test_new_classify.py ]; then python3 tests/python/test_new_classify.py; fi
+	@if [ -f tests/python/test_llm_client.py ]; then python3 tests/python/test_llm_client.py; fi
 
 test-elisp:
 	@echo "Running Elisp tests..."
