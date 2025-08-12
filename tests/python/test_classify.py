@@ -158,36 +158,36 @@ Subject: Long Email
             result = self.classifier.call_command("test prompt")
             self.assertEqual(result, 'social')
 
-    @patch.object(mail_classify, 'LLMClient')
-    def test_classify_with_llm_client(self, MockLLMClient):
+    def test_classify_with_llm_client(self):
         """Test classification using the unified LLMClient."""
         if not mail_classify.HAS_LLM_CLIENT:
             self.skipTest("llm_client not available")
 
-        # Configure the mock
-        mock_instance = MockLLMClient.return_value
-        mock_instance.complete.return_value = " important "
-        mock_instance.backend = "mock_backend"
+        with patch.object(mail_classify, 'LLMClient') as MockLLMClient:
+            # Configure the mock
+            mock_instance = MockLLMClient.return_value
+            mock_instance.complete.return_value = " important "
+            mock_instance.backend = "mock_backend"
 
-        # Re-initialize classifier to pick up the mock.
-        # This is needed because LLMClient is instantiated in __init__.
-        classifier = mail_classify.EmailClassifier()
+            # Re-initialize classifier to pick up the mock.
+            # This is needed because LLMClient is instantiated in __init__.
+            classifier = mail_classify.EmailClassifier()
 
-        # Check if the mock was used for initialization
-        self.assertIsNotNone(classifier.llm_client)
-        MockLLMClient.assert_called_once_with(no_cache=False)
+            # Check if the mock was used for initialization
+            self.assertIsNotNone(classifier.llm_client)
+            MockLLMClient.assert_called_once_with(no_cache=False)
 
-        # Patch a legacy method to ensure it's not called
-        with patch.object(classifier, 'call_ollama') as mock_legacy_call:
-            # Run classification
-            result = classifier.classify("test prompt")
+            # Patch a legacy method to ensure it's not called
+            with patch.object(classifier, 'call_ollama') as mock_legacy_call:
+                # Run classification
+                result = classifier.classify("test prompt")
 
-            # Verify results
-            self.assertEqual(result, 'important')
-            mock_instance.complete.assert_called_once()
+                # Verify results
+                self.assertEqual(result, 'important')
+                mock_instance.complete.assert_called_once()
 
-            # Check that legacy method was not called
-            mock_legacy_call.assert_not_called()
+                # Check that legacy method was not called
+                mock_legacy_call.assert_not_called()
     
     def test_validate_classification_valid(self):
         """Test validation of valid classifications."""
