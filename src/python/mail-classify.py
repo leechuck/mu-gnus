@@ -11,14 +11,37 @@ import json
 import email
 from email import policy
 from email.parser import Parser
-import requests
 import subprocess
+from pathlib import Path
+
+# Try to import the unified LLM client
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from llm_client import LLMClient
+    HAS_LLM_CLIENT = True
+except ImportError:
+    HAS_LLM_CLIENT = False
 
 
 class EmailClassifier:
     def __init__(self, debug=False, dry_run=False):
         self.debug = debug
         self.dry_run = dry_run
+        
+        # Try to use unified LLM client if available
+        self.llm_client = None
+        if HAS_LLM_CLIENT and not dry_run:
+            try:
+                # Initialize with caching enabled by default
+                self.llm_client = LLMClient(no_cache=False)
+                if debug:
+                    print(f"Using unified LLM client with backend: {self.llm_client.backend}", file=sys.stderr)
+            except Exception as e:
+                if debug:
+                    print(f"Failed to initialize LLM client: {e}", file=sys.stderr)
+                    print("Falling back to legacy methods", file=sys.stderr)
+        
+        # Legacy configuration for backward compatibility
         self.llm_type = os.environ.get('MAIL_LLM_TYPE', 'ollama')
         
     def read_email(self, source=None):
@@ -77,8 +100,46 @@ Respond with only a single word: important, newsletter, social, or automated."""
         
         return prompt
     
+    def classify(self, prompt):
+        """Call appropriate LLM based on configuration."""
+        if self.dry_run:
+            return "automated"
+        
+        # Try unified LLM client first
+        if self.llm_client:
+            try:
+                system_prompt = "You are an email classifier. Respond with only one word: important, newsletter, social, or automated."
+                response = self.llm_client.complete(prompt, system=system_prompt)
+                if response:
+                    return response.strip().lower()
+            except Exception as e:
+                if self.debug:
+                    print(f"LLM client error: {e}", file=sys.stderr)
+                    print("Falling back to legacy methods", file=sys.stderr)
+        
+        # Fall back to legacy methods
+        if self.llm_type == 'ollama':
+            return self.call_ollama(prompt)
+        elif self.llm_type == 'gpt4all':
+            return self.call_gpt4all(prompt)
+        elif self.llm_type == 'openai':
+            return self.call_openai(prompt)
+        elif self.llm_type == 'cmd':
+            return self.call_command(prompt)
+        else:
+            if self.debug:
+                print(f"Unknown LLM type: {self.llm_type}", file=sys.stderr)
+            return "automated"
+    
     def call_ollama(self, prompt):
-        """Call Ollama API."""
+        """Call Ollama API (legacy method for backward compatibility)."""
+        try:
+            import requests
+        except ImportError:
+            if self.debug:
+                print("requests library not installed", file=sys.stderr)
+            return "automated"
+        
         url = "http://localhost:11434/api/generate"
         
         payload = {
@@ -101,8 +162,15 @@ Respond with only a single word: important, newsletter, social, or automated."""
             return "automated"
     
     def call_gpt4all(self, prompt):
-        """Call GPT4All API."""
+        """Call GPT4All API (legacy method for backward compatibility)."""
         # GPT4All typically runs on port 4891
+        try:
+            import requests
+        except ImportError:
+            if self.debug:
+                print("requests library not installed", file=sys.stderr)
+            return "automated"
+        
         host = os.environ.get('GPT4ALL_HOST', 'localhost')
         port = os.environ.get('GPT4ALL_PORT', '4891')
         url = f"http://{host}:{port}/v1/completions"
@@ -131,11 +199,18 @@ Respond with only a single word: important, newsletter, social, or automated."""
             return "automated"
     
     def call_openai(self, prompt):
-        """Call OpenAI API."""
+        """Call OpenAI API (legacy method for backward compatibility)."""
         api_key = os.environ.get('OPENAI_API_KEY')
         if not api_key:
             if self.debug:
                 print("OPENAI_API_KEY not set", file=sys.stderr)
+            return "automated"
+        
+        try:
+            import requests
+        except ImportError:
+            if self.debug:
+                print("requests library not installed", file=sys.stderr)
             return "automated"
         
         url = "https://api.openai.com/v1/chat/completions"
@@ -167,7 +242,7 @@ Respond with only a single word: important, newsletter, social, or automated."""
             return "automated"
     
     def call_command(self, prompt):
-        """Call external command."""
+        """Call external command (legacy method for backward compatibility)."""
         cmd = os.environ.get('MAIL_LLM_CMD')
         if not cmd:
             if self.debug:
@@ -187,24 +262,6 @@ Respond with only a single word: important, newsletter, social, or automated."""
         except Exception as e:
             if self.debug:
                 print(f"Error calling command: {e}", file=sys.stderr)
-            return "automated"
-    
-    def classify(self, prompt):
-        """Call appropriate LLM based on configuration."""
-        if self.dry_run:
-            return "automated"
-        
-        if self.llm_type == 'ollama':
-            return self.call_ollama(prompt)
-        elif self.llm_type == 'gpt4all':
-            return self.call_gpt4all(prompt)
-        elif self.llm_type == 'openai':
-            return self.call_openai(prompt)
-        elif self.llm_type == 'cmd':
-            return self.call_command(prompt)
-        else:
-            if self.debug:
-                print(f"Unknown LLM type: {self.llm_type}", file=sys.stderr)
             return "automated"
     
     def validate_classification(self, classification):
