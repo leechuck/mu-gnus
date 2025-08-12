@@ -77,24 +77,28 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
 
 (ert-deftest mu-gnus-get-message-id-test ()
   "Test extraction of Message-ID."
-  ;; We need to mock both gnus-summary-buffer and the functions
-  (let ((gnus-summary-buffer (current-buffer))
-        (old-gnus-summary-article-header (and (fboundp 'gnus-summary-article-header)
-                                              (symbol-function 'gnus-summary-article-header)))
-        (old-mail-header-id (and (fboundp 'mail-header-id)
-                                (symbol-function 'mail-header-id))))
-    (unwind-protect
-        (progn
-          (fset 'gnus-summary-article-header (lambda () 'dummy-header))
-          (fset 'mail-header-id (lambda (header) "<the-id@domain.com>"))
-          (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>")))
-      ;; Restore original functions
-      (if old-gnus-summary-article-header
-          (fset 'gnus-summary-article-header old-gnus-summary-article-header)
-        (fmakunbound 'gnus-summary-article-header))
-      (if old-mail-header-id
-          (fset 'mail-header-id old-mail-header-id)
-        (fmakunbound 'mail-header-id)))))
+  ;; Create a mock buffer to act as gnus-summary-buffer
+  (with-temp-buffer
+    (let ((test-buffer (current-buffer))
+          (gnus-summary-buffer (current-buffer))
+          (old-gnus-summary-article-header (and (fboundp 'gnus-summary-article-header)
+                                                (symbol-function 'gnus-summary-article-header)))
+          (old-mail-header-id (and (fboundp 'mail-header-id)
+                                  (symbol-function 'mail-header-id))))
+      (unwind-protect
+          (progn
+            ;; Mock the functions globally so they work in any buffer context
+            (fset 'gnus-summary-article-header (lambda () 'dummy-header))
+            (fset 'mail-header-id (lambda (header) "<the-id@domain.com>"))
+            ;; Now call the function
+            (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>")))
+        ;; Restore original functions
+        (if old-gnus-summary-article-header
+            (fset 'gnus-summary-article-header old-gnus-summary-article-header)
+          (fmakunbound 'gnus-summary-article-header))
+        (if old-mail-header-id
+            (fset 'mail-header-id old-mail-header-id)
+          (fmakunbound 'mail-header-id))))))
 
 (defvar last-shell-command nil)
 (defun mock-shell-command (command &optional output-buffer error-buffer)
