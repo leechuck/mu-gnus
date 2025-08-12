@@ -3,6 +3,7 @@
 (require 'ert)
 (require 'json)
 (require 'cl-lib)
+(require 'gnus-sum)
 
 ;; Load the file to be tested.
 (load-file (expand-file-name "../../elisp/mu-gnus.el" (file-name-directory load-file-name)))
