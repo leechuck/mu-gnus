@@ -16,7 +16,9 @@ SOURCES = $(wildcard $(SRCDIR)/*.c)
 # Separate mail-db from other targets
 MAIL_DB_SRC = $(SRCDIR)/mail-db.c
 MAIL_PROCESS_SRC = $(SRCDIR)/mail-process.c
-OTHER_SOURCES = $(filter-out $(MAIL_DB_SRC) $(MAIL_PROCESS_SRC),$(SOURCES))
+CONFIG_SRC = $(SRCDIR)/config.c
+CONFIG_OBJ = $(BUILDDIR)/config.o
+OTHER_SOURCES = $(filter-out $(MAIL_DB_SRC) $(MAIL_PROCESS_SRC) $(CONFIG_SRC),$(SOURCES))
 OTHER_TARGETS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%,$(OTHER_SOURCES))
 
 # Default target
@@ -25,13 +27,17 @@ all: $(BUILDDIR) $(BUILDDIR)/mail-db $(BUILDDIR)/mail-process $(OTHER_TARGETS)
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
 
+# Rule for config object
+$(CONFIG_OBJ): $(CONFIG_SRC) $(SRCDIR)/config.h
+	$(CC) $(CFLAGS) -c -o $@ $(CONFIG_SRC)
+
 # Special rule for mail-db which needs SQLite3
-$(BUILDDIR)/mail-db: $(SRCDIR)/mail-db.c
-	$(CC) $(CFLAGS) -o $@ $< -lsqlite3
+$(BUILDDIR)/mail-db: $(MAIL_DB_SRC) $(CONFIG_OBJ)
+	$(CC) $(CFLAGS) -o $@ $(MAIL_DB_SRC) $(CONFIG_OBJ) -lsqlite3
 
 # Rule for mail-process
-$(BUILDDIR)/mail-process: $(SRCDIR)/mail-process.c
-	$(CC) $(CFLAGS) -o $@ $<
+$(BUILDDIR)/mail-process: $(MAIL_PROCESS_SRC) $(CONFIG_OBJ)
+	$(CC) $(CFLAGS) -o $@ $(MAIL_PROCESS_SRC) $(CONFIG_OBJ)
 
 # Generic rule for other C programs
 $(BUILDDIR)/mail-extract: $(SRCDIR)/mail-extract.c
