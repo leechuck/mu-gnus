@@ -158,7 +158,7 @@ Subject: Long Email
             result = self.classifier.call_command("test prompt")
             self.assertEqual(result, 'social')
 
-    @patch('mail_classify.LLMClient')
+    @patch.object(mail_classify, 'LLMClient')
     def test_classify_with_llm_client(self, MockLLMClient):
         """Test classification using the unified LLMClient."""
         if not mail_classify.HAS_LLM_CLIENT:
