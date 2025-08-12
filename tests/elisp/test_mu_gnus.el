@@ -39,7 +39,7 @@
                  (subject . "Test Subject")
                  (date . 1672531200)))) ; Corresponds to 2023-01-01 00:00:00 UTC
     (with-temp-buffer
-      (let ((default-time-zone "UTC")) ; Set timezone for consistent test results
+      (let ((system-time-zone "UTC")) ; Set timezone for consistent test results
         (should (string= (mu-gnus-format-reply-entry entry)
                          "* TODO Reply to: Test Subject\n  From: Test Sender <sender@example.com>\n  Date: 2023-01-01 00:00\n  Message-ID: <id@host>\n"))))))
 
@@ -48,7 +48,7 @@
 (ert-deftest mu-gnus-get-message-id-test ()
   "Test extraction of Message-ID."
   (let ((gnus-summary-buffer (current-buffer))) ; needed for with-current-buffer
-    (with-redefs (gnus-summary-article-header (lambda () '((message-id . "<the-id@domain.com>"))))
+    (with-redefs ((gnus-summary-article-header . (lambda () '((message-id . "<the-id@domain.com>")))))
       (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>")))))
 
 (defvar last-shell-command nil)
@@ -60,10 +60,10 @@
   "Test marking a message as replied."
   (let ((mu-gnus-db-command "bin/mail-db")
         (last-shell-command nil))
-    (with-redefs (mu-gnus-get-message-id (lambda () "<msg-to-mark@replied.com>"))
-      (with-redefs (shell-command #'mock-shell-command)
-        (mu-gnus-mark-replied)
-        (should (string= last-shell-command "bin/mail-db update '<msg-to-mark@replied.com>' --replied 1"))))))
+    (with-redefs ((mu-gnus-get-message-id . (lambda () "<msg-to-mark@replied.com>"))
+                  (shell-command . #'mock-shell-command))
+      (mu-gnus-mark-replied)
+      (should (string= last-shell-command "bin/mail-db update '<msg-to-mark@replied.com>' --replied 1")))))
 
 (defun mock-shell-command-to-string (command)
   (cond
