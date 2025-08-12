@@ -250,6 +250,16 @@ This will execute tests for:
 *   Python scripts (`tests/python/`)
 *   Emacs Lisp code (`tests/elisp/`)
 
+### LLM Integration Test
+
+There is also a script to perform a live integration test with your configured LLM provider. This will make a real API call.
+
+First, ensure your `config.ini` is configured with the LLM provider you want to test. Then run the script:
+
+```bash
+python3 tests/python/test_llm_integration.py
+```
+
 To run only the C tests:
 
 ```bash
