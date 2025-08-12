@@ -39,32 +39,35 @@ char* extract_json_value(const char* json_str, const char* key) {
     if (*value_start != '"') return NULL; // Expects string value
     value_start++;
 
-    // Find the end of the string, respecting escaped quotes
-    const char* value_end = value_start;
-    while (*value_end) {
-        if (*value_end == '"' && (value_end == value_start || *(value_end - 1) != '\\')) {
+    // Find the end of the string, handling escaped characters
+    const char* p = value_start;
+    while (*p) {
+        if (*p == '\\' && *(p + 1)) {
+            // Skip escaped character
+            p += 2;
+        } else if (*p == '"') {
+            // Found unescaped quote - end of string
             break;
+        } else {
+            p++;
         }
-        value_end++;
     }
     
-    if (*value_end != '"') return NULL;
+    if (*p != '"') return NULL;
 
-    size_t value_len = value_end - value_start;
+    size_t value_len = p - value_start;
     char* value = malloc(value_len + 1);
     if (!value) return NULL;
 
     // Copy and un-escape in one pass
     const char *src = value_start;
     char *dst = value;
-    while (src < value_end) {
-        if (*src == '\\' && (src + 1) < value_end) {
+    while (src < p) {
+        if (*src == '\\' && (src + 1) < p) {
             // Skip the backslash and copy the next character
             src++;
-            *dst++ = *src++;
-        } else {
-            *dst++ = *src++;
         }
+        *dst++ = *src++;
     }
     *dst = '\0';
 
