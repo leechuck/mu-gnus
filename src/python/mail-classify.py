@@ -126,6 +126,19 @@ Respond in JSON: {{"category": "...", "urgency": "...", "sender_type": "..."}}
     
     def classify(self, prompt):
         """Call LLM and get classification result as JSON."""
+        if os.getenv("MAIL_LLM_TYPE") == "cmd":
+            cmd = os.getenv("MAIL_LLM_CMD")
+            if not cmd:
+                return {"category": "automated", "urgency": "low", "sender_type": "system", "error": "MAIL_LLM_TYPE is 'cmd' but MAIL_LLM_CMD is not set"}
+            try:
+                proc = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+                return json.loads(proc.stdout)
+            except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+                error_details = str(e)
+                if hasattr(e, 'stderr') and e.stderr:
+                    error_details += f" | stderr: {e.stderr.strip()}"
+                return {"category": "automated", "urgency": "low", "sender_type": "system", "error": error_details}
+
         if self.dry_run:
             return {"category": "automated", "urgency": "low", "sender_type": "system"}
 

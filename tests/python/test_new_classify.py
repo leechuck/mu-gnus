@@ -4,9 +4,7 @@ import os
 import sys
 import json
 import tempfile
-
-# Add src/python to path to allow importing mail_classify
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src/python')))
+import importlib.util
 
 # Mock llm_client before importing mail_classify
 # This avoids ImportError if llm_client or its dependencies are not installed
@@ -14,7 +12,11 @@ mock_llm_client_module = MagicMock()
 sys.modules['llm_client'] = mock_llm_client_module
 
 # Import mail_classify after mocking llm_client
-import mail_classify
+spec = importlib.util.spec_from_file_location("mail_classify", 
+                                               os.path.join(os.path.dirname(__file__), 
+                                                          '../../src/python/mail-classify.py'))
+mail_classify = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mail_classify)
 
 class TestNewEmailClassifier(unittest.TestCase):
 
