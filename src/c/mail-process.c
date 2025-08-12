@@ -12,6 +12,63 @@
 #define MAX_EMAIL_SIZE (10 * 1024 * 1024) // 10MB
 #define MAX_LINE_LENGTH 4096
 
+// Helper to extract a value for a key from a JSON string.
+// Returns a dynamically allocated string that must be freed.
+// Very basic parser: assumes keys and values are quoted strings.
+char* extract_json_value(const char* json_str, const char* key) {
+    if (!json_str || !key) return NULL;
+
+    char key_pattern[256];
+    // snprintf is safe and prevents buffer overflows.
+    snprintf(key_pattern, sizeof(key_pattern), "\"%s\":", key);
+
+    const char* key_ptr = strstr(json_str, key_pattern);
+    if (!key_ptr) {
+        // Also try with space after colon for robustness
+        snprintf(key_pattern, sizeof(key_pattern), "\"%s\" :", key);
+        key_ptr = strstr(json_str, key_pattern);
+        if (!key_ptr) return NULL;
+    }
+
+    const char* value_start = key_ptr + strlen(key_pattern);
+    while (*value_start && isspace((unsigned char)*value_start)) {
+        value_start++;
+    }
+
+    if (*value_start != '"') return NULL; // Expects string value
+    value_start++;
+
+    // Find the end of the string, respecting escaped quotes
+    const char* value_end = value_start;
+    while (*value_end) {
+        if (*value_end == '"' && (value_end == value_start || *(value_end - 1) != '\\')) {
+            break;
+        }
+        value_end++;
+    }
+    
+    if (*value_end != '"') return NULL;
+
+    size_t value_len = value_end - value_start;
+    char* value = malloc(value_len + 1);
+    if (!value) return NULL;
+
+    strncpy(value, value_start, value_len);
+    value[value_len] = '\0';
+
+    // Basic un-escaping for common characters, can be expanded
+    char *p, *q;
+    for (p = value, q = value; *p; p++) {
+        if (*p == '\\' && *(p+1) != '\0') {
+            p++; // Skip the backslash
+        }
+        *q++ = *p;
+    }
+    *q = '\0';
+
+    return value;
+}
+
 // Helper to trim whitespace from start and end of a string
 char* trim_whitespace(char *str) {
     if (!str) return NULL;
@@ -99,12 +156,13 @@ char* read_email() {
     return buffer;
 }
 
-// Calls mail-classify.py to get the classification.
-// Returns a dynamically allocated string with the classification.
+// Calls mail-classify.py to get the classification as a JSON string.
+// Returns a dynamically allocated string with the JSON.
 char* classify_email(const char* email_content) {
-    char *classification = malloc(128);
-    if (!classification) return NULL;
-    strcpy(classification, "automated"); // Default
+    char *classification_json = malloc(2048); // Increased size for JSON
+    if (!classification_json) return NULL;
+    // Default JSON in case of error
+    strcpy(classification_json, "{\"category\": \"automated\", \"error\": \"classification failed\"}");
 
     char *python_script = "src/python/mail-classify.py";
     
@@ -113,7 +171,7 @@ char* classify_email(const char* email_content) {
 
     if (pipe(to_child_pipe) == -1 || pipe(from_child_pipe) == -1) {
         perror("pipe");
-        return classification;
+        return classification_json;
     }
 
     pid_t pid = fork();
@@ -121,7 +179,7 @@ char* classify_email(const char* email_content) {
         perror("fork");
         close(to_child_pipe[0]); close(to_child_pipe[1]);
         close(from_child_pipe[0]); close(from_child_pipe[1]);
-        return classification;
+        return classification_json;
     }
 
     if (pid == 0) { // Child
@@ -149,26 +207,33 @@ char* classify_email(const char* email_content) {
         write(to_child_pipe[1], email_content, strlen(email_content));
         close(to_child_pipe[1]);
 
-        char buffer[128];
+        char buffer[2048]; // Increased size for JSON
         ssize_t count = read(from_child_pipe[0], buffer, sizeof(buffer) - 1);
         if (count > 0) {
             buffer[count] = '\0';
-            strncpy(classification, trim_whitespace(buffer), 127);
-            classification[127] = '\0';
+            // The output is a JSON string, might have newlines.
+            // We just copy it as is.
+            char *trimmed_output = trim_whitespace(buffer);
+            if (strlen(trimmed_output) > 0) {
+                strncpy(classification_json, trimmed_output, 2047);
+                classification_json[2047] = '\0';
+            }
         }
         close(from_child_pipe[0]);
 
         waitpid(pid, NULL, 0);
     }
 
-    return classification;
+    return classification_json;
 }
 
 // Calls `mail-db` to add the email record.
-void add_to_database(const char* message_id, const char* from, const char* subject, const char* classification, int needs_reply) {
+void add_to_database(const char* message_id, const char* from, const char* subject, 
+                     const char* classification, int needs_reply,
+                     const char* urgency, const char* sender_type, const char* classification_json) {
     if (!message_id || strlen(message_id) == 0) return;
 
-    char *argv[12];
+    char *argv[20];
     int argc = 0;
 
     argv[argc++] = "./bin/mail-db";
@@ -186,6 +251,18 @@ void add_to_database(const char* message_id, const char* from, const char* subje
     if (classification) {
         argv[argc++] = "--classification";
         argv[argc++] = (char*)classification;
+    }
+    if (urgency) {
+        argv[argc++] = "--urgency";
+        argv[argc++] = (char*)urgency;
+    }
+    if (sender_type) {
+        argv[argc++] = "--sender-type";
+        argv[argc++] = (char*)sender_type;
+    }
+    if (classification_json) {
+        argv[argc++] = "--classification-json";
+        argv[argc++] = (char*)classification_json;
     }
     if (needs_reply) {
         argv[argc++] = "--needs-reply";
@@ -228,7 +305,14 @@ int main() {
         return 3; // Default to automated/error
     }
 
-    char* classification = classify_email(email_content);
+    char* classification_json = classify_email(email_content);
+    char* classification = extract_json_value(classification_json, "category");
+    char* urgency = extract_json_value(classification_json, "urgency");
+    char* sender_type = extract_json_value(classification_json, "sender_type");
+
+    if (!classification) {
+        classification = strdup("automated");
+    }
     
     char* message_id_raw = extract_header(email_content, "Message-ID");
     char* message_id = NULL;
@@ -251,18 +335,21 @@ int main() {
     char* subject = extract_header(email_content, "Subject");
     char* existing_xlabel = extract_header(email_content, "X-Label");
 
-    int needs_reply = (strcmp(classification, "important") == 0);
-    add_to_database(message_id, from, subject, classification, needs_reply);
+    int needs_reply = (classification && strcmp(classification, "important") == 0);
+    add_to_database(message_id, from, subject, classification, needs_reply, urgency, sender_type, classification_json);
 
     if (!existing_xlabel) {
-        printf("X-Label: %s\n", classification);
+        printf("X-Label: %s\n", classification ? classification : "automated");
     }
     printf("%s", email_content);
 
-    int exit_code = get_exit_code(classification);
+    int exit_code = get_exit_code(classification ? classification : "automated");
 
     free(email_content);
+    free(classification_json);
     free(classification);
+    free(urgency);
+    free(sender_type);
     free(message_id);
     free(from);
     free(subject);

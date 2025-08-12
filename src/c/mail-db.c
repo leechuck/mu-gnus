@@ -13,6 +13,9 @@ typedef struct {
     char *from_addr;
     char *subject;
     char *classification;
+    char *urgency;
+    char *sender_type;
+    char *classification_json;
     int needs_reply;
     int replied;
     time_t date;
@@ -114,7 +117,10 @@ int init_database(const char *db_path) {
                      "subject TEXT,"
                      "classification TEXT,"
                      "needs_reply INTEGER,"
-                     "replied INTEGER"
+                     "replied INTEGER,"
+                     "urgency TEXT,"
+                     "sender_type TEXT,"
+                     "classification_json TEXT"
                      ");";
     
     rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
@@ -132,6 +138,8 @@ int init_database(const char *db_path) {
         "CREATE INDEX IF NOT EXISTS idx_from_addr ON emails(from_addr);",
         "CREATE INDEX IF NOT EXISTS idx_classification ON emails(classification);",
         "CREATE INDEX IF NOT EXISTS idx_date ON emails(date);",
+        "CREATE INDEX IF NOT EXISTS idx_urgency ON emails(urgency);",
+        "CREATE INDEX IF NOT EXISTS idx_sender_type ON emails(sender_type);",
         NULL
     };
     
@@ -158,8 +166,8 @@ int add_email(const char *db_path, EmailRecord *email) {
         return 1;
     }
     
-    const char *sql = "INSERT INTO emails (message_id, date, from_addr, subject, classification, needs_reply, replied) "
-                     "VALUES (?, ?, ?, ?, ?, ?, ?);";
+    const char *sql = "INSERT INTO emails (message_id, date, from_addr, subject, classification, needs_reply, replied, urgency, sender_type, classification_json) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -175,6 +183,9 @@ int add_email(const char *db_path, EmailRecord *email) {
     sqlite3_bind_text(stmt, 5, email->classification, -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 6, email->needs_reply);
     sqlite3_bind_int(stmt, 7, email->replied);
+    sqlite3_bind_text(stmt, 8, email->urgency, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 9, email->sender_type, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 10, email->classification_json, -1, SQLITE_STATIC);
     
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
@@ -200,7 +211,7 @@ int query_emails(const char *db_path, int needs_reply, int not_replied, const ch
         return 1;
     }
     
-    char sql[MAX_QUERY_SIZE] = "SELECT message_id, date, from_addr, subject, classification, needs_reply, replied FROM emails WHERE 1=1";
+    char sql[MAX_QUERY_SIZE] = "SELECT message_id, date, from_addr, subject, classification, needs_reply, replied, urgency, sender_type, classification_json FROM emails WHERE 1=1";
     
     if (needs_reply >= 0) {
         strcat(sql, " AND needs_reply = 1");
@@ -259,6 +270,18 @@ int query_emails(const char *db_path, int needs_reply, int not_replied, const ch
         print_json_string((const char *)sqlite3_column_text(stmt, 4));
         printf(",\n");
         
+        printf("    \"urgency\": ");
+        print_json_string((const char *)sqlite3_column_text(stmt, 7));
+        printf(",\n");
+
+        printf("    \"sender_type\": ");
+        print_json_string((const char *)sqlite3_column_text(stmt, 8));
+        printf(",\n");
+
+        printf("    \"classification_json\": ");
+        print_json_string((const char *)sqlite3_column_text(stmt, 9));
+        printf(",\n");
+
         printf("    \"needs_reply\": %s,\n", sqlite3_column_int(stmt, 5) ? "true" : "false");
         printf("    \"replied\": %s\n", sqlite3_column_int(stmt, 6) ? "true" : "false");
         printf("  }");
@@ -384,6 +407,9 @@ int main(int argc, char *argv[]) {
             {"needs-reply", no_argument, 0, 'n'},
             {"date", required_argument, 0, 'd'},
             {"db", required_argument, 0, 'b'},
+            {"urgency", required_argument, 0, 'u'},
+            {"sender-type", required_argument, 0, 't'},
+            {"classification-json", required_argument, 0, 'j'},
             {0, 0, 0, 0}
         };
         
@@ -391,7 +417,7 @@ int main(int argc, char *argv[]) {
         int c;
         optind = 3; // Start after "add <message-id>"
         
-        while ((c = getopt_long(argc, argv, "f:s:c:nd:b:", long_options, &option_index)) != -1) {
+        while ((c = getopt_long(argc, argv, "f:s:c:nd:b:u:t:j:", long_options, &option_index)) != -1) {
             switch (c) {
                 case 'f':
                     email.from_addr = optarg;
@@ -410,6 +436,15 @@ int main(int argc, char *argv[]) {
                     break;
                 case 'b':
                     explicit_db_path = optarg;
+                    break;
+                case 'u':
+                    email.urgency = optarg;
+                    break;
+                case 't':
+                    email.sender_type = optarg;
+                    break;
+                case 'j':
+                    email.classification_json = optarg;
                     break;
                 default:
                     print_usage(argv[0]);
