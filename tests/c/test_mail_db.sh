@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 # Test database path
 TEST_DB="/tmp/test_mail.db"
-MAIL_DB="./src/c/mail-db"
+MAIL_DB="./bin/mail-db"
 
 # Clean up function
 cleanup() {
@@ -22,10 +22,11 @@ cleanup() {
 # Set up trap to clean up on exit
 trap cleanup EXIT
 
-# Compile mail-db if needed
+# Check if mail-db binary exists
 if [ ! -f "$MAIL_DB" ]; then
-    echo "Compiling mail-db.c..."
-    gcc -o "$MAIL_DB" src/c/mail-db.c -lsqlite3 -Wall -Wextra
+    echo "Error: mail-db binary not found at $MAIL_DB"
+    echo "Please run 'make' first to build the binary"
+    exit 1
 fi
 
 echo "Running mail-db tests..."
