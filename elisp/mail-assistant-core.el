@@ -39,6 +39,29 @@
   (when (and gnus-newsgroup-name gnus-current-article)
     (list gnus-newsgroup-name gnus-current-article)))
 
+(defun mail-assistant-goto-message-by-id (message-id)
+  "Navigate to a specific message in Gnus using MESSAGE-ID.
+First tries to get GNUS_GROUP from org properties, then opens the message.
+Returns t if successful, nil if not found."
+  (let ((group (org-entry-get nil "GNUS_GROUP")))
+    (when group
+      ;; Open Gnus if not already open
+      (gnus)
+      ;; Open the group
+      (gnus-group-read-group nil t group)
+      ;; Try to find the message
+      (if (gnus-summary-goto-article message-id nil t)
+          (progn
+            ;; Show the article
+            (gnus-summary-show-article)
+            t)
+        ;; If not found, try refer-article
+        (if (gnus-summary-refer-article message-id)
+            (progn
+              (gnus-summary-show-article)
+              t)
+          nil)))))
+
 (defun mail-assistant-process-article ()
   "Process current Gnus article and extract action items."
   (when (and mail-assistant-enable-auto-process
@@ -114,29 +137,35 @@
 (defun mail-assistant-open-original (message-id)
   "Open original email in Gnus using MESSAGE-ID."
   (interactive "sMessage-ID: ")
-  (let ((group (org-entry-get nil "GNUS_GROUP")))
-    (when group
-      ;; Switch to Gnus or open it
-      (if (get-buffer "*Group*")
-          (switch-to-buffer "*Group*")
-        (gnus))
-      ;; Open the group
-      (gnus-group-read-group nil t group)
-      ;; Go to the message
-      (when (gnus-summary-goto-article message-id nil t)
-        ;; Show the article
-        (gnus-summary-show-article)
-        (message "Opened original email")))))
+  (if (mail-assistant-goto-message-by-id message-id)
+      (progn
+        (switch-to-buffer (get-buffer "*Summary*"))
+        (message "Original email opened in Gnus"))
+    (message "Could not find message with ID: %s" message-id)))
+
+(defun mail-assistant-open-original-at-point ()
+  "Open original email from org entry at point."
+  (interactive)
+  (let ((message-id (mail-assistant-get-message-id-from-org)))
+    (if message-id
+        (if (mail-assistant-goto-message-by-id message-id)
+            (progn
+              (switch-to-buffer (get-buffer "*Summary*"))
+              (message "Original email opened in Gnus"))
+          (message "Could not find message with ID: %s" message-id))
+      (message "No MESSAGE_ID found at current org entry"))))
 
 (defun mail-assistant-reply-all (message-id)
   "Open reply-all for the given message-id."
   (interactive "sMessage-ID: ")
   ;; First open the original message
-  (mail-assistant-open-original message-id)
-  ;; Open reply-all with original
-  (gnus-summary-wide-reply-with-original 1)
-  ;; Move point to message body (after headers)
-  (message-goto-body))
+  (if (mail-assistant-goto-message-by-id message-id)
+      (progn
+        ;; Open reply-all with original
+        (gnus-summary-wide-reply-with-original 1)
+        ;; Move point to message body (after headers)
+        (message-goto-body))
+    (message "Could not find message with ID: %s" message-id)))
 
 (defun mail-assistant-process-article-interactive ()
   "Manually process current article even if already processed."
@@ -217,9 +246,7 @@
       (if group
           ;; Use group from org properties
           (progn
-            (if (get-buffer "*Group*")
-                (switch-to-buffer "*Group*")
-              (gnus))
+            (gnus)
             (gnus-group-read-group nil t group)
             (when (gnus-summary-goto-article message-id nil t)
               (gnus-summary-select-article)
@@ -274,14 +301,6 @@
           (insert draft)
           (message "Draft inserted, review and send"))
       (message "Could not generate draft - check MESSAGE_ID and response text"))))
-
-(defun mail-assistant-open-original-at-point ()
-  "Open original email from org entry at point."
-  (interactive)
-  (let ((message-id (mail-assistant-get-message-id-from-org)))
-    (if message-id
-        (mail-assistant-open-original message-id)
-      (message "No MESSAGE_ID found at current org entry"))))
 
 (defun mail-assistant-toggle-auto-process ()
   "Toggle automatic processing of articles."
