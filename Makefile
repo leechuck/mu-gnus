@@ -11,18 +11,17 @@ BUILDDIR = bin
 INSTALLDIR = $(HOME)/.local/bin
 PYTHONDIR = src/python
 
-# Discover C source files
-SOURCES = $(wildcard $(SRCDIR)/*.c)
-# Separate mail-db from other targets
+# C source files
 MAIL_DB_SRC = $(SRCDIR)/mail-db.c
 MAIL_PROCESS_SRC = $(SRCDIR)/mail-process.c
+MAIL_EXTRACT_SRC = $(SRCDIR)/mail-extract.c
 CONFIG_SRC = $(SRCDIR)/config.c
+
+# Object files
 CONFIG_OBJ = $(BUILDDIR)/config.o
-OTHER_SOURCES = $(filter-out $(MAIL_DB_SRC) $(MAIL_PROCESS_SRC) $(CONFIG_SRC),$(SOURCES))
-OTHER_TARGETS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%,$(OTHER_SOURCES))
 
 # Default target
-all: $(BUILDDIR) $(BUILDDIR)/mail-db $(BUILDDIR)/mail-process $(OTHER_TARGETS)
+all: $(BUILDDIR) $(BUILDDIR)/mail-db $(BUILDDIR)/mail-process $(BUILDDIR)/mail-extract
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
@@ -39,8 +38,8 @@ $(BUILDDIR)/mail-db: $(MAIL_DB_SRC) $(CONFIG_OBJ)
 $(BUILDDIR)/mail-process: $(MAIL_PROCESS_SRC) $(CONFIG_OBJ)
 	$(CC) $(CFLAGS) -o $@ $(MAIL_PROCESS_SRC) $(CONFIG_OBJ)
 
-# Generic rule for other C programs
-$(BUILDDIR)/mail-extract: $(SRCDIR)/mail-extract.c
+# Rule for mail-extract
+$(BUILDDIR)/mail-extract: $(MAIL_EXTRACT_SRC)
 	$(CC) $(CFLAGS) -o $@ $<
 
 # Test targets
