@@ -69,7 +69,7 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
     (let ((result (mu-gnus-format-reply-entry entry)))
       (should (string-match "\\* TODO Reply to: Test Subject" result))
       (should (string-match "From: Test Sender <sender@example.com>" result))
-      (should (string-match "Message-ID: <id@host>" result))
+      (should (string-match ":MESSAGE_ID: <id@host>" result))
       ;; Check that date is formatted (but don't check exact time due to timezone)
       (should (string-match "Date: 2023-01-01" result)))))
 
