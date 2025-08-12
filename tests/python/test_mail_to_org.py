@@ -219,9 +219,10 @@ Another regular line"""
         converter = mail_to_org.EmailToOrg(scheduled=True)
         msg = email.message_from_string(self.sample_plain_email)
         
-        with patch.object(mail_to_org, 'datetime') as mock_datetime:
+        # Mock datetime.now() to return a fixed date
+        with patch('mail_to_org.datetime') as mock_datetime:
             mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
-            mock_datetime.now().strftime = datetime(2024, 1, 15, 12, 0, 0).strftime
+            mock_datetime.strftime = datetime.strftime
             
             org_content = converter.convert_to_org(msg)
             self.assertIn("SCHEDULED: <2024-01-15 Mon>", org_content)
@@ -261,9 +262,10 @@ Another regular line"""
             converter = mail_to_org.EmailToOrg(template_file=template_file, scheduled=True)
             msg = email.message_from_string(self.sample_plain_email)
             
-            with patch.object(mail_to_org, 'datetime') as mock_datetime:
+            # Mock datetime.now() to return a fixed date
+            with patch('mail_to_org.datetime') as mock_datetime:
                 mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
-                mock_datetime.now().strftime = datetime(2024, 1, 15, 12, 0, 0).strftime
+                mock_datetime.strftime = datetime.strftime
                 
                 org_content = converter.convert_to_org(msg)
                 
