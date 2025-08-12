@@ -220,7 +220,7 @@ Another regular line"""
         msg = email.message_from_string(self.sample_plain_email)
         
         # Mock datetime.now() to return a fixed date
-        with patch('mail_to_org.datetime') as mock_datetime:
+        with patch.object(mail_to_org, 'datetime') as mock_datetime:
             mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
             mock_datetime.strftime = datetime.strftime
             
@@ -263,7 +263,7 @@ Another regular line"""
             msg = email.message_from_string(self.sample_plain_email)
             
             # Mock datetime.now() to return a fixed date
-            with patch('mail_to_org.datetime') as mock_datetime:
+            with patch.object(mail_to_org, 'datetime') as mock_datetime:
                 mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
                 mock_datetime.strftime = datetime.strftime
                 
