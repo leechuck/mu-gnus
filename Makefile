@@ -47,7 +47,13 @@ test: all
 	@if [ -f tests/python/test_classify.py ]; then cd tests/python && python3 test_classify.py; fi
 	@if [ -f tests/python/test_mail_to_org.py ]; then cd tests/python && python3 test_mail_to_org.py; fi
 	@echo "Running Elisp tests..."
-	@# TODO: Add commands to run Elisp tests from tests/elisp/
+	@if [ -f tests/elisp/test_mu_gnus.el ]; then \
+		if emacs -batch -l ert -l tests/elisp/test_mu_gnus.el -f ert-run-tests-batch-and-exit; then \
+			echo "OK"; \
+		else \
+			exit 1; \
+		fi; \
+	fi
 	@echo "All tests finished."
 
 # Test mail-process specifically (quick test)
