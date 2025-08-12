@@ -30,7 +30,7 @@ class EmailClassifier:
         self.prompt_template = self._load_prompt_template(prompt_file)
         
         self.llm_client = None
-        if not dry_run:
+        if not dry_run and os.getenv("MAIL_LLM_TYPE") != "cmd":
             if not HAS_LLM_CLIENT:
                 raise ImportError("llm_client.py not found, which is required for classification.")
             try:
