@@ -6,6 +6,9 @@
 (require 'json)
 (require 'org)
 
+(defvar mail-assistant-enable-auto-process t
+  "Whether to automatically process articles when viewing them.")
+
 (defun mail-assistant-get-config-value (key)
   "Get a configuration value from config.ini using mail-analyze."
   (let ((output (shell-command-to-string 
@@ -19,46 +22,105 @@
         (expand-file-name "~/org/mail-tasks.org")
       (expand-file-name org-file))))
 
+(defun mail-assistant-message-already-processed-p (message-id org-file)
+  "Check if MESSAGE-ID already exists in ORG-FILE."
+  (when (file-exists-p org-file)
+    (with-temp-buffer
+      (insert-file-contents org-file)
+      (goto-char (point-min))
+      (search-forward (concat ":MESSAGE_ID: " message-id) nil t))))
+
 (defun mail-assistant-process-article ()
   "Process current Gnus article and extract action items."
-  (when (and gnus-article-buffer
+  (when (and mail-assistant-enable-auto-process
+             gnus-article-buffer
              (get-buffer gnus-article-buffer))
     (let* ((message-id (mail-header-id (gnus-summary-article-header)))
            (from (mail-header-from (gnus-summary-article-header)))
            (subject (mail-header-subject (gnus-summary-article-header)))
            (date (mail-header-date (gnus-summary-article-header)))
            (group gnus-newsgroup-name)
-           (raw-article (with-current-buffer gnus-article-buffer
-                          (buffer-substring-no-properties (point-min) (point-max))))
-           (temp-file (make-temp-file "mail-assistant-" nil ".txt"))
-           json-response actions)
+           (org-file (mail-assistant-get-org-file)))
       
-      ;; Write article to temp file
-      (with-temp-file temp-file
-        (insert raw-article))
-      
-      ;; Call mail-analyze to extract actions
-      (setq json-response 
-            (shell-command-to-string 
-             (format "mail-analyze --extract-actions < %s" temp-file)))
-      
-      ;; Clean up temp file
-      (delete-file temp-file)
-      
-      ;; Parse JSON response
-      (setq actions (condition-case nil
-                        (let ((json-object-type 'alist)
-                              (json-array-type 'list))
-                          (json-read-from-string json-response))
-                      (error nil)))
-      
-      ;; Append to org file if we got actions
-      (when actions
-        (let ((action-items (cdr (assoc 'actions actions)))
-              (org-file (mail-assistant-get-org-file)))
-          (when action-items
-            (mail-assistant-append-to-org 
-             org-file message-id group from subject date action-items)))))))
+      ;; Skip if already processed
+      (unless (mail-assistant-message-already-processed-p message-id org-file)
+        (let* ((raw-article (with-current-buffer gnus-article-buffer
+                              (buffer-substring-no-properties (point-min) (point-max))))
+               (temp-file (make-temp-file "mail-assistant-" nil ".txt"))
+               json-response actions)
+          
+          ;; Write article to temp file
+          (with-temp-file temp-file
+            (insert raw-article))
+          
+          ;; Call mail-analyze to extract actions
+          (setq json-response 
+                (shell-command-to-string 
+                 (format "mail-analyze --extract-actions < %s" temp-file)))
+          
+          ;; Clean up temp file
+          (delete-file temp-file)
+          
+          ;; Parse JSON response
+          (setq actions (condition-case nil
+                            (let ((json-object-type 'alist)
+                                  (json-array-type 'list))
+                              (json-read-from-string json-response))
+                          (error nil)))
+          
+          ;; Append to org file if we got actions
+          (when actions
+            (let ((action-items (cdr (assoc 'actions actions))))
+              (when action-items
+                (mail-assistant-append-to-org 
+                 org-file message-id group from subject date action-items)))))))))
+
+(defun mail-assistant-process-article-interactive ()
+  "Manually process current article even if already processed."
+  (interactive)
+  (let ((mail-assistant-enable-auto-process t))
+    (when (and gnus-article-buffer
+               (get-buffer gnus-article-buffer))
+      (let* ((message-id (mail-header-id (gnus-summary-article-header)))
+             (from (mail-header-from (gnus-summary-article-header)))
+             (subject (mail-header-subject (gnus-summary-article-header)))
+             (date (mail-header-date (gnus-summary-article-header)))
+             (group gnus-newsgroup-name)
+             (raw-article (with-current-buffer gnus-article-buffer
+                            (buffer-substring-no-properties (point-min) (point-max))))
+             (temp-file (make-temp-file "mail-assistant-" nil ".txt"))
+             json-response actions)
+        
+        ;; Write article to temp file
+        (with-temp-file temp-file
+          (insert raw-article))
+        
+        ;; Call mail-analyze to extract actions
+        (setq json-response 
+              (shell-command-to-string 
+               (format "mail-analyze --extract-actions < %s" temp-file)))
+        
+        ;; Clean up temp file
+        (delete-file temp-file)
+        
+        ;; Parse JSON response
+        (setq actions (condition-case nil
+                          (let ((json-object-type 'alist)
+                                (json-array-type 'list))
+                            (json-read-from-string json-response))
+                        (error nil)))
+        
+        ;; Append to org file if we got actions
+        (if actions
+            (let ((action-items (cdr (assoc 'actions actions)))
+                  (org-file (mail-assistant-get-org-file)))
+              (if action-items
+                  (progn
+                    (mail-assistant-append-to-org 
+                     org-file message-id group from subject date action-items)
+                    (message "Email processed and added to %s" org-file))
+                (message "No action items found in this email")))
+          (message "Failed to process email"))))))
 
 (defun mail-assistant-append-to-org (org-file message-id group from subject date action-items)
   "Append task entry to org file."
@@ -169,8 +231,20 @@
           (message "Draft inserted, review and send"))
       (message "Could not generate draft - check MESSAGE_ID and response text"))))
 
+(defun mail-assistant-toggle-auto-process ()
+  "Toggle automatic processing of articles."
+  (interactive)
+  (setq mail-assistant-enable-auto-process (not mail-assistant-enable-auto-process))
+  (message "Mail assistant auto-process %s" 
+           (if mail-assistant-enable-auto-process "enabled" "disabled")))
+
 ;; Add to gnus article prepare hook
 (add-hook 'gnus-article-prepare-hook 'mail-assistant-process-article)
+
+;; Bind keys in gnus summary mode
+(with-eval-after-load 'gnus-sum
+  (define-key gnus-summary-mode-map (kbd "C-c m p") 'mail-assistant-process-article-interactive)
+  (define-key gnus-summary-mode-map (kbd "C-c m t") 'mail-assistant-toggle-auto-process))
 
 ;; Bind key in org-mode
 (with-eval-after-load 'org
