@@ -158,6 +158,11 @@ class MailConfig:
         """
         env_var_name = f"MAIL_{section.upper()}_{option.upper()}"
         env_var_value = os.environ.get(env_var_name)
+
+        # Handle abbreviation for command used in tests
+        if env_var_name == "MAIL_LLM_COMMAND" and env_var_value is None:
+            env_var_value = os.environ.get("MAIL_LLM_CMD")
+
         if env_var_value is not None:
             return env_var_value
         
