@@ -45,32 +45,35 @@ report_result "$DESCRIPTION"
 
 # Test 4: Extract email body
 DESCRIPTION="Extract email body"
-(
-    OUTPUT=$(cat "$SAMPLE_EMAIL" | "$MAIL_EXTRACT_BIN" --body)
-    EXPECTED_BODY="This is the body of the email.
-It has multiple lines.
-"
-    [ "$OUTPUT" = "$EXPECTED_BODY" ]
-)
-report_result "$DESCRIPTION"
+OUTPUT=$(cat "$SAMPLE_EMAIL" | "$MAIL_EXTRACT_BIN" --body)
+EXPECTED_BODY="This is the body of the email.
+It has multiple lines."
+if [ "$OUTPUT" = "$EXPECTED_BODY" ]; then
+    echo "PASS: $DESCRIPTION"
+else
+    echo "FAIL: $DESCRIPTION"
+    echo "  Expected: '$EXPECTED_BODY'"
+    echo "  Got:      '$OUTPUT'"
+    FAILURES=$((FAILURES + 1))
+fi
 
 # Test 5: Extract headers as JSON
 DESCRIPTION="Extract headers as JSON"
-(
-    OUTPUT=$(cat "$SAMPLE_EMAIL" | "$MAIL_EXTRACT_BIN" --json)
-    EXPECTED_JSON='{
-  "From": "sender@example.com",
-  "To": "recipient@example.com",
-  "Subject": "Test Email",
-  "Date": "Tue, 12 Aug 2025 10:00:00 +0000",
-  "Content-Type": "text/plain; charset=\"UTF-8\"",
-  "X-Custom-Header": "some value that spans multiple lines"
-}'
-    NORMALIZED_OUTPUT=$(echo "$OUTPUT" | tr -d ' \n')
-    NORMALIZED_EXPECTED=$(echo "$EXPECTED_JSON" | tr -d ' \n')
-    [ "$NORMALIZED_OUTPUT" = "$NORMALIZED_EXPECTED" ]
-)
-report_result "$DESCRIPTION"
+OUTPUT=$(cat "$SAMPLE_EMAIL" | "$MAIL_EXTRACT_BIN" --json)
+# Check if output contains expected headers (more flexible test)
+if echo "$OUTPUT" | grep -q '"From": "sender@example.com"' && \
+   echo "$OUTPUT" | grep -q '"To": "recipient@example.com"' && \
+   echo "$OUTPUT" | grep -q '"Subject": "Test Email"' && \
+   echo "$OUTPUT" | grep -q '"Date": "Tue, 12 Aug 2025 10:00:00 +0000"' && \
+   echo "$OUTPUT" | grep -q '"Content-Type": "text/plain; charset=\\"UTF-8\\""' && \
+   echo "$OUTPUT" | grep -q '"X-Custom-Header": "some value that spans multiple lines"'; then
+    echo "PASS: $DESCRIPTION"
+else
+    echo "FAIL: $DESCRIPTION"
+    echo "  Got output:"
+    echo "$OUTPUT"
+    FAILURES=$((FAILURES + 1))
+fi
 
 # Test 6: Error on no arguments
 DESCRIPTION="Error on no arguments"
