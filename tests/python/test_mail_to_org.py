@@ -219,7 +219,7 @@ Another regular line"""
         converter = mail_to_org.EmailToOrg(scheduled=True)
         msg = email.message_from_string(self.sample_plain_email)
         
-        with patch('mail_to_org.datetime') as mock_datetime:
+        with patch.object(mail_to_org, 'datetime') as mock_datetime:
             mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
             mock_datetime.now().strftime = datetime(2024, 1, 15, 12, 0, 0).strftime
             
@@ -261,7 +261,7 @@ Another regular line"""
             converter = mail_to_org.EmailToOrg(template_file=template_file, scheduled=True)
             msg = email.message_from_string(self.sample_plain_email)
             
-            with patch('mail_to_org.datetime') as mock_datetime:
+            with patch.object(mail_to_org, 'datetime') as mock_datetime:
                 mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
                 mock_datetime.now().strftime = datetime(2024, 1, 15, 12, 0, 0).strftime
                 

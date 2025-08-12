@@ -90,7 +90,14 @@ class EmailToOrg:
             except Exception:
                 # Fallback for older email format
                 try:
-                    body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
+                    body = msg.get_payload(decode=True)
+                    if isinstance(body, bytes):
+                        charset = msg.get_charset() or 'utf-8'
+                        body = body.decode(charset, errors='replace')
+                    
+                    if content_type == 'text/html':
+                        body = self.html_to_text(body)
+
                     if body:
                         body_parts.append(body)
                 except Exception:
