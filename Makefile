@@ -27,7 +27,7 @@ test: all
 	@echo "Running C tests..."
 	@if [ -f tests/c/run_tests.sh ]; then chmod +x tests/c/run_tests.sh && ./tests/c/run_tests.sh; fi
 	@echo "Running Python tests..."
-	@# TODO: Add commands to run Python tests from tests/python/
+	@if [ -f tests/python/test_classify.py ]; then cd tests/python && python3 test_classify.py; fi
 	@echo "Running Elisp tests..."
 	@# TODO: Add commands to run Elisp tests from tests/elisp/
 	@echo "Tests finished."
@@ -43,3 +43,5 @@ endif
 clean:
 	rm -rf $(BUILDDIR)
 	find . -name "*.elc" -delete
+	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+	find . -name "*.pyc" -delete
