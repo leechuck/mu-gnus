@@ -143,7 +143,10 @@ class MailConfig:
     
     def get(self, section: str, option: str, fallback: Any = None) -> str:
         """
-        Get configuration value.
+        Get configuration value, with environment variable override.
+        
+        Environment variables are checked first, in the format MAIL_SECTION_OPTION.
+        For example, section 'llm', option 'type' is overridden by MAIL_LLM_TYPE.
         
         Args:
             section: Configuration section name.
@@ -153,6 +156,11 @@ class MailConfig:
         Returns:
             Configuration value as string.
         """
+        env_var_name = f"MAIL_{section.upper()}_{option.upper()}"
+        env_var_value = os.environ.get(env_var_name)
+        if env_var_value is not None:
+            return env_var_value
+        
         return self.config.get(section, option, fallback=fallback)
     
     def getint(self, section: str, option: str, fallback: int = 0) -> int:
