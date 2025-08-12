@@ -36,6 +36,8 @@ This is a test body.
         self.mock_llm_client_instance.reset_mock()
         mock_llm_client_module.LLMClient.reset_mock()
 
+        self.mock_config = MagicMock()
+
     @patch('sys.stdin')
     def test_classification_json_output(self, mock_stdin):
         """Test the main classification workflow with JSON output."""
@@ -53,7 +55,7 @@ This is a test body.
             mock_read_text.return_value = "From: {from}, Subject: {subject}, Body: {body}"
             
             # We need to re-initialize the classifier inside the patch context
-            classifier = mail_classify.EmailClassifier(debug=False)
+            classifier = mail_classify.EmailClassifier(config=self.mock_config, debug=False)
 
             # Act
             with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
@@ -80,7 +82,7 @@ This is a test body.
         try:
             # Arrange
             self.mock_llm_client_instance.complete.return_value = {"category": "automated", "urgency": "low", "sender_type": "system"}
-            classifier = mail_classify.EmailClassifier(prompt_file=prompt_path)
+            classifier = mail_classify.EmailClassifier(config=self.mock_config, prompt_file=prompt_path)
             
             email_data = {
                 'from': 'test@test.com',
