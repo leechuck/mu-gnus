@@ -78,7 +78,8 @@ BINDINGS is a list of (SYMBOL . NEW-DEFINITION) pairs."
 (ert-deftest mu-gnus-get-message-id-test ()
   "Test extraction of Message-ID."
   (let ((gnus-summary-buffer (current-buffer))) ; needed for with-current-buffer
-    (with-redefs ((gnus-summary-article-header . (lambda () '((message-id . "<the-id@domain.com>")))))
+    (with-redefs ((gnus-summary-article-header . (lambda () 'dummy-header))
+                  (mail-header-id . (lambda (header) "<the-id@domain.com>")))
       (should (string= (mu-gnus-get-message-id) "<the-id@domain.com>")))))
 
 (defvar last-shell-command nil)
