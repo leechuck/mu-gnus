@@ -1,7 +1,7 @@
 Classify this email into ONE category:
 - important: requires action or response
 - newsletter: promotional, marketing, updates
-- social: personal, casual conversations  
+- social: personal, casual conversations
 - automated: system notifications, receipts
 - spam: unwanted, suspicious
 

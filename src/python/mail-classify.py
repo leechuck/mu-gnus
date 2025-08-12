@@ -52,7 +52,7 @@ class EmailClassifier:
         if default_prompt_path.exists():
             return default_prompt_path.read_text()
         
-        # Fallback hardcoded prompt if file is missing
+        # Fallback hardcoded prompt
         return """Classify this email into ONE category:
 - important: requires action or response
 - newsletter: promotional, marketing, updates
@@ -69,7 +69,7 @@ From: {from}
 Subject: {subject}
 Body (first 1000 chars): {body}
 
-Respond in JSON: {{"category": "...", "urgency": "...", "sender_type": "..."}}
+Respond in JSON: {"category": "...", "urgency": "...", "sender_type": "..."}
 """
         
     def read_email(self, source=None):
