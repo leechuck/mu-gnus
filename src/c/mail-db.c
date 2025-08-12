@@ -21,9 +21,10 @@ typedef struct {
 void print_usage(const char *prog_name) {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  %s init <database_path>\n", prog_name);
-    fprintf(stderr, "  %s add <message-id> --from <addr> --subject <subj> [--classification <class>] [--needs-reply] [--date <timestamp>]\n", prog_name);
-    fprintf(stderr, "  %s query [--needs-reply] [--not-replied] [--from <addr>] [--classification <class>]\n", prog_name);
-    fprintf(stderr, "  %s update <message-id> [--replied 0|1] [--needs-reply 0|1] [--classification <class>]\n", prog_name);
+    fprintf(stderr, "  %s add <message-id> --from <addr> --subject <subj> [--classification <class>] [--needs-reply] [--date <timestamp>] [--db <path>]\n", prog_name);
+    fprintf(stderr, "  %s query [--needs-reply] [--not-replied] [--from <addr>] [--classification <class>] [--db <path>]\n", prog_name);
+    fprintf(stderr, "  %s update <message-id> [--replied 0|1] [--needs-reply 0|1] [--classification <class>] [--db <path>]\n", prog_name);
+    fprintf(stderr, "\nIf --db is not specified, uses MAIL_DB_PATH environment variable or ~/.mail.db\n");
 }
 
 void print_json_string(const char *str) {
@@ -64,6 +65,35 @@ void print_json_string(const char *str) {
         }
     }
     printf("\"");
+}
+
+char* get_db_path(const char *explicit_path) {
+    static char expanded_path[MAX_PATH_SIZE];
+    
+    const char *db_path = explicit_path;
+    if (!db_path) {
+        db_path = getenv("MAIL_DB_PATH");
+    }
+    if (!db_path) {
+        db_path = "~/.mail.db";
+    }
+    
+    // Expand tilde if present
+    if (db_path[0] == '~') {
+        const char *home = getenv("HOME");
+        if (home) {
+            snprintf(expanded_path, sizeof(expanded_path), "%s%s", home, db_path + 1);
+            return expanded_path;
+        }
+    }
+    
+    // Copy to static buffer if not already there
+    if (db_path != expanded_path) {
+        strncpy(expanded_path, db_path, MAX_PATH_SIZE - 1);
+        expanded_path[MAX_PATH_SIZE - 1] = '\0';
+    }
+    
+    return expanded_path;
 }
 
 int init_database(const char *db_path) {
@@ -324,21 +354,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    char *db_path = getenv("MAIL_DB_PATH");
-    if (!db_path) {
-        db_path = "~/.mail.db";
-    }
-    
-    // Expand tilde if present
-    char expanded_path[MAX_PATH_SIZE];
-    if (db_path[0] == '~') {
-        const char *home = getenv("HOME");
-        if (home) {
-            snprintf(expanded_path, sizeof(expanded_path), "%s%s", home, db_path + 1);
-            db_path = expanded_path;
-        }
-    }
-    
     if (strcmp(argv[1], "init") == 0) {
         if (argc < 3) {
             fprintf(stderr, "Error: database path required\n");
@@ -360,12 +375,15 @@ int main(int argc, char *argv[]) {
         email.replied = 0;
         email.needs_reply = 0;
         
+        char *explicit_db_path = NULL;
+        
         static struct option long_options[] = {
             {"from", required_argument, 0, 'f'},
             {"subject", required_argument, 0, 's'},
             {"classification", required_argument, 0, 'c'},
             {"needs-reply", no_argument, 0, 'n'},
             {"date", required_argument, 0, 'd'},
+            {"db", required_argument, 0, 'b'},
             {0, 0, 0, 0}
         };
         
@@ -373,7 +391,7 @@ int main(int argc, char *argv[]) {
         int c;
         optind = 3; // Start after "add <message-id>"
         
-        while ((c = getopt_long(argc, argv, "f:s:c:nd:", long_options, &option_index)) != -1) {
+        while ((c = getopt_long(argc, argv, "f:s:c:nd:b:", long_options, &option_index)) != -1) {
             switch (c) {
                 case 'f':
                     email.from_addr = optarg;
@@ -390,25 +408,30 @@ int main(int argc, char *argv[]) {
                 case 'd':
                     email.date = atol(optarg);
                     break;
+                case 'b':
+                    explicit_db_path = optarg;
+                    break;
                 default:
                     print_usage(argv[0]);
                     return 1;
             }
         }
         
-        return add_email(db_path, &email);
+        return add_email(get_db_path(explicit_db_path), &email);
     }
     else if (strcmp(argv[1], "query") == 0) {
         int needs_reply = -1;
         int not_replied = -1;
         char *from_addr = NULL;
         char *classification = NULL;
+        char *explicit_db_path = NULL;
         
         static struct option long_options[] = {
             {"needs-reply", no_argument, 0, 'n'},
             {"not-replied", no_argument, 0, 'r'},
             {"from", required_argument, 0, 'f'},
             {"classification", required_argument, 0, 'c'},
+            {"db", required_argument, 0, 'b'},
             {0, 0, 0, 0}
         };
         
@@ -416,7 +439,7 @@ int main(int argc, char *argv[]) {
         int c;
         optind = 2; // Start after "query"
         
-        while ((c = getopt_long(argc, argv, "nrf:c:", long_options, &option_index)) != -1) {
+        while ((c = getopt_long(argc, argv, "nrf:c:b:", long_options, &option_index)) != -1) {
             switch (c) {
                 case 'n':
                     needs_reply = 1;
@@ -430,13 +453,16 @@ int main(int argc, char *argv[]) {
                 case 'c':
                     classification = optarg;
                     break;
+                case 'b':
+                    explicit_db_path = optarg;
+                    break;
                 default:
                     print_usage(argv[0]);
                     return 1;
             }
         }
         
-        return query_emails(db_path, needs_reply, not_replied, from_addr, classification);
+        return query_emails(get_db_path(explicit_db_path), needs_reply, not_replied, from_addr, classification);
     }
     else if (strcmp(argv[1], "update") == 0) {
         if (argc < 3) {
@@ -449,11 +475,13 @@ int main(int argc, char *argv[]) {
         int replied = -1;
         int needs_reply = -1;
         char *classification = NULL;
+        char *explicit_db_path = NULL;
         
         static struct option long_options[] = {
             {"replied", required_argument, 0, 'r'},
             {"needs-reply", required_argument, 0, 'n'},
             {"classification", required_argument, 0, 'c'},
+            {"db", required_argument, 0, 'b'},
             {0, 0, 0, 0}
         };
         
@@ -461,7 +489,7 @@ int main(int argc, char *argv[]) {
         int c;
         optind = 3; // Start after "update <message-id>"
         
-        while ((c = getopt_long(argc, argv, "r:n:c:", long_options, &option_index)) != -1) {
+        while ((c = getopt_long(argc, argv, "r:n:c:b:", long_options, &option_index)) != -1) {
             switch (c) {
                 case 'r':
                     replied = atoi(optarg);
@@ -472,13 +500,16 @@ int main(int argc, char *argv[]) {
                 case 'c':
                     classification = optarg;
                     break;
+                case 'b':
+                    explicit_db_path = optarg;
+                    break;
                 default:
                     print_usage(argv[0]);
                     return 1;
             }
         }
         
-        return update_email(db_path, message_id, replied, needs_reply, classification);
+        return update_email(get_db_path(explicit_db_path), message_id, replied, needs_reply, classification);
     }
     else {
         fprintf(stderr, "Unknown command: %s\n", argv[1]);
