@@ -362,8 +362,8 @@ Subject: Empty
             # Verify that an error message was printed to stderr
             self.assertIn("No such file or directory", mock_stderr.getvalue())
 
-    @patch('mail_to_org.get_config')
-    @patch('mail_to_org.EmailToOrg')
+    @patch.object(mail_to_org, 'get_config')
+    @patch.object(mail_to_org, 'EmailToOrg')
     def test_main_uses_config_template(self, mock_EmailToOrg, mock_get_config):
         """Test that main function uses template from config."""
         # Arrange
@@ -385,8 +385,8 @@ Subject: Empty
         mock_EmailToOrg.assert_called_once_with(template_file='/path/to/template.org', scheduled=False)
         mock_converter_instance.run.assert_called_once()
 
-    @patch('mail_to_org.get_config')
-    @patch('mail_to_org.EmailToOrg')
+    @patch.object(mail_to_org, 'get_config')
+    @patch.object(mail_to_org, 'EmailToOrg')
     def test_main_cli_overrides_config_template(self, mock_EmailToOrg, mock_get_config):
         """Test that --template CLI arg overrides config."""
         # Arrange
