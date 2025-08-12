@@ -346,9 +346,13 @@ Subject: Empty
     
     def test_run_method_with_error(self):
         """Test run method with invalid input."""
-        # Try to read non-existent file
-        result = self.converter.run("/non/existent/file.txt")
-        self.assertEqual(result, 1)
+        from io import StringIO
+        # Try to read non-existent file and capture stderr
+        with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
+            result = self.converter.run("/non/existent/file.txt")
+            self.assertEqual(result, 1)
+            # Verify that an error message was printed to stderr
+            self.assertIn("No such file or directory", mock_stderr.getvalue())
 
 if __name__ == '__main__':
     unittest.main()
