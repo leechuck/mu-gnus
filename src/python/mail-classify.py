@@ -100,6 +100,36 @@ Respond with only a single word: important, newsletter, social, or automated."""
                 print(f"Error calling Ollama: {e}", file=sys.stderr)
             return "automated"
     
+    def call_gpt4all(self, prompt):
+        """Call GPT4All API."""
+        # GPT4All typically runs on port 4891
+        host = os.environ.get('GPT4ALL_HOST', 'localhost')
+        port = os.environ.get('GPT4ALL_PORT', '4891')
+        url = f"http://{host}:{port}/v1/completions"
+        
+        payload = {
+            "model": os.environ.get('MAIL_LLM_MODEL', 'gpt4all-falcon-q4_0'),
+            "prompt": prompt,
+            "max_tokens": 10,
+            "temperature": 0.1,
+            "top_p": 0.9,
+            "stream": False
+        }
+        
+        try:
+            response = requests.post(url, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            # GPT4All returns completions in 'choices' array
+            if 'choices' in result and len(result['choices']) > 0:
+                text = result['choices'][0].get('text', '').strip().lower()
+                return text
+            return "automated"
+        except Exception as e:
+            if self.debug:
+                print(f"Error calling GPT4All: {e}", file=sys.stderr)
+            return "automated"
+    
     def call_openai(self, prompt):
         """Call OpenAI API."""
         api_key = os.environ.get('OPENAI_API_KEY')
@@ -166,6 +196,8 @@ Respond with only a single word: important, newsletter, social, or automated."""
         
         if self.llm_type == 'ollama':
             return self.call_ollama(prompt)
+        elif self.llm_type == 'gpt4all':
+            return self.call_gpt4all(prompt)
         elif self.llm_type == 'openai':
             return self.call_openai(prompt)
         elif self.llm_type == 'cmd':
