@@ -72,7 +72,8 @@ test-llm:
 test-llm-integration:
 	@echo "Running Python LLM integration test (optional)..."
 	@if [ -f tests/python/test_llm_integration.py ]; then \
-		if ! python3 tests/python/test_llm_integration.py; then \
+		if ! (unset MAIL_LLM_TYPE MAIL_LLM_COMMAND MAIL_LLM_CMD MAIL_LLM_MODEL MAIL_LLM_API_KEY MAIL_LLM_API_URL; \
+		python3 tests/python/test_llm_integration.py); then \
 			echo "--> Warning: LLM integration test failed. This can be due to missing config or network issues."; \
 		fi; \
 	fi
