@@ -1,0 +1,11 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Test Email
+Date: Tue, 12 Aug 2025 10:00:00 +0000
+Content-Type: text/plain; charset="UTF-8"
+X-Custom-Header: some value
+ that spans
+ multiple lines
+
+This is the body of the email.
+It has multiple lines.
