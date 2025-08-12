@@ -1,4 +1,1 @@
-(setq draft-output
-      (shell-command-to-string
-       (format "mail-draft-reply --original %s --response %s"
-               email-file response-file)))
+
