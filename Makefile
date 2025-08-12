@@ -1,6 +1,6 @@
 # Makefile for the mail assistant project
 
-.PHONY: all test test-c test-python test-elisp test-llm install clean test-mail-process test-config
+.PHONY: all test test-c test-python test-elisp test-llm test-llm-integration install clean test-mail-process test-config
 
 # Variables
 CC = gcc
@@ -47,7 +47,7 @@ $(BUILDDIR)/test_config: tests/c/test_config.c $(CONFIG_OBJ)
 	$(CC) $(CFLAGS) -o $@ tests/c/test_config.c $(CONFIG_OBJ)
 
 # Test targets
-test: test-c test-python test-elisp test-llm
+test: test-c test-python test-elisp test-llm test-llm-integration
 	@echo "All tests finished."
 
 test-c: all test-config
@@ -68,6 +68,14 @@ test-llm:
 	@echo "Running Python LLM tests..."
 	@if [ -f tests/python/test_new_classify.py ]; then python3 tests/python/test_new_classify.py; fi
 	@if [ -f tests/python/test_llm_client.py ]; then python3 tests/python/test_llm_client.py; fi
+
+test-llm-integration:
+	@echo "Running Python LLM integration test (optional)..."
+	@if [ -f tests/python/test_llm_integration.py ]; then \
+		if ! python3 tests/python/test_llm_integration.py; then \
+			echo "--> Warning: LLM integration test failed. This can be due to missing config or network issues."; \
+		fi; \
+	fi
 
 test-elisp:
 	@echo "Running Elisp tests..."
