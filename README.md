@@ -136,7 +136,14 @@ A unified client for interacting with LLMs. It can be used from the command line
 echo "What is the capital of France?" | python3 src/python/llm_client.py
 ```
 
-It is configured via the `[llm]` section in `config.ini`. See the Configuration section for details.
+It supports multiple backends, configured via the `[llm]` section in `config.ini`:
+- `cmd`: Executes a local command.
+- `openai`: Connects to the OpenAI API.
+- `ollama`: Connects to a local Ollama instance.
+- `openrouter`: Connects to the OpenRouter API.
+- `gpt4all`: Connects to a local GPT4All instance.
+
+See the `config.ini.example` file for configuration details.
 
 #### mail-to-org.py
 
