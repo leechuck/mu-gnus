@@ -59,9 +59,12 @@ Content-Type: text/plain
 This is an automated system notification.
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 3 ] && grep -q "^X-Label: automated" "$TEST_OUTPUT"; then
     echo -e "${GREEN}PASS${NC}"
@@ -86,9 +89,12 @@ This is an important message about the project deadline.
 Please respond immediately.
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo important" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo important" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 0 ] && grep -q "^X-Label: important" "$TEST_OUTPUT"; then
     echo -e "${GREEN}PASS${NC}"
@@ -111,9 +117,12 @@ Welcome to our weekly newsletter!
 Here are this week's top stories...
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 1 ] && grep -q "^X-Label: newsletter" "$TEST_OUTPUT"; then
     echo -e "${GREEN}PASS${NC}"
@@ -136,9 +145,12 @@ Someone just followed you on Social Network.
 Check out their profile!
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo social" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo social" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 2 ] && grep -q "^X-Label: social" "$TEST_OUTPUT"; then
     echo -e "${GREEN}PASS${NC}"
@@ -190,7 +202,7 @@ This email already has an X-Label header.
 EOF
 
 MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null || true
 
 # Count X-Label headers
 LABEL_COUNT=$(grep -c "^X-Label:" "$TEST_OUTPUT")
@@ -225,9 +237,12 @@ Content-Type: text/html
 --boundary123--
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 3 ] && grep -q "^X-Label: automated" "$TEST_OUTPUT" && \
    grep -q "multipart/alternative" "$TEST_OUTPUT"; then
@@ -250,11 +265,15 @@ Date: Sun, 7 Jan 2024 17:00:00 +0000
 Testing special characters in headers.
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 # Check if email was processed without errors
-if [ $? -eq 3 ] && grep -q "^X-Label: automated" "$TEST_OUTPUT"; then
+if [ $EXIT_CODE -eq 3 ] && grep -q "^X-Label: automated" "$TEST_OUTPUT"; then
     echo -e "${GREEN}PASS${NC}"
 else
     echo -e "${RED}FAIL${NC}"
@@ -273,9 +292,12 @@ Date: Mon, 8 Jan 2024 18:00:00 +0000
 This email has no Message-ID header.
 EOF
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 # Should still process and add X-Label, but won't be in database
 if [ $EXIT_CODE -eq 3 ] && grep -q "^X-Label: automated" "$TEST_OUTPUT"; then
@@ -303,9 +325,12 @@ for i in {1..5000}; do
     echo "This is line $i of a large email. It contains some text to make the email bigger." >> "$TEST_EMAIL"
 done
 
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
-    timeout 5 $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo newsletter" \
+    timeout 5 $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 1 ] && grep -q "^X-Label: newsletter" "$TEST_OUTPUT"; then
     echo -e "${GREEN}PASS${NC}"
@@ -332,7 +357,7 @@ Last line of the body.
 EOF
 
 MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="echo automated" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null || true
 
 # Check if body is preserved
 if grep -q "Line 1 of the body" "$TEST_OUTPUT" && \
@@ -359,9 +384,12 @@ This tests fallback when classifier fails.
 EOF
 
 # Use a command that will fail
-MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="false" \
-    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null
-EXIT_CODE=$?
+if MAIL_DB_PATH="$TEST_DB" MAIL_LLM_TYPE=cmd MAIL_LLM_CMD="false" \
+    $MAIL_PROCESS < "$TEST_EMAIL" > "$TEST_OUTPUT" 2>/dev/null; then
+    EXIT_CODE=0
+else
+    EXIT_CODE=$?
+fi
 
 # Should fallback to automated classification
 if [ $EXIT_CODE -eq 3 ] && grep -q "^X-Label: automated" "$TEST_OUTPUT"; then
