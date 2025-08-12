@@ -38,6 +38,7 @@ test: all
 	@if [ -f tests/c/test_mail_db.sh ]; then chmod +x tests/c/test_mail_db.sh && ./tests/c/test_mail_db.sh; fi
 	@echo "Running Python tests..."
 	@if [ -f tests/python/test_classify.py ]; then cd tests/python && python3 test_classify.py; fi
+	@if [ -f tests/python/test_mail_to_org.py ]; then cd tests/python && python3 test_mail_to_org.py; fi
 	@echo "Running Elisp tests..."
 	@# TODO: Add commands to run Elisp tests from tests/elisp/
 	@echo "Tests finished."
