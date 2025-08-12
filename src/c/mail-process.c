@@ -139,8 +139,8 @@ char* classify_email(const char* email_content) {
             close(dev_null);
         }
 
-        execlp(python_script, python_script, NULL);
-        perror("execlp mail-classify.py");
+        execlp("python3", "python3", python_script, NULL);
+        perror("execlp python3");
         exit(1);
     } else { // Parent
         close(to_child_pipe[0]);
