@@ -144,18 +144,38 @@
                     message-id))
     (save-buffer)))
 
+(defun mail-assistant-goto-message-by-id (message-id)
+  "Navigate to a specific message in Gnus using MESSAGE-ID and GNUS_GROUP from org."
+  (let ((group (org-entry-get nil "GNUS_GROUP")))
+    (when group
+      ;; Open Gnus
+      (gnus)
+      ;; Open the group
+      (gnus-group-read-group nil t group)
+      ;; Search for the message-id
+      (when (gnus-summary-goto-article message-id nil t)
+        ;; Show the article
+        (gnus-summary-show-article)))))
+
 (defun mail-assistant-reply-all (message-id)
   "Switch to Gnus and open reply-all for the given message-id."
   (interactive "sMessage-ID: ")
-  ;; Switch to Gnus
-  (gnus)
-  ;; Try to find the article
-  (when (and gnus-newsgroup-name
-             (gnus-summary-goto-article message-id nil t))
-    ;; Open reply-all with original
-    (gnus-summary-wide-reply-with-original 1)
-    ;; Move point to message body (after headers)
-    (message-goto-body)))
+  ;; Try to navigate using org properties first
+  (if (org-entry-get nil "GNUS_GROUP")
+      (progn
+        (mail-assistant-goto-message-by-id message-id)
+        ;; Open reply-all with original
+        (gnus-summary-wide-reply-with-original 1)
+        ;; Move point to message body (after headers)
+        (message-goto-body))
+    ;; Fallback to old method if not in org context
+    (gnus)
+    (when (and gnus-newsgroup-name
+               (gnus-summary-goto-article message-id nil t))
+      ;; Open reply-all with original
+      (gnus-summary-wide-reply-with-original 1)
+      ;; Move point to message body (after headers)
+      (message-goto-body))))
 
 (defun mail-assistant-get-message-id-from-org ()
   "Get MESSAGE_ID property from current org heading."
@@ -180,14 +200,25 @@
 (defun mail-assistant-get-original-email (message-id)
   "Get original email from Gnus using message-id."
   (let ((original-buffer (current-buffer))
+        (group (org-entry-get nil "GNUS_GROUP"))
         email-content)
     (save-window-excursion
-      (gnus)
-      (when (and gnus-newsgroup-name
-                 (gnus-summary-goto-article message-id nil t))
-        (gnus-summary-select-article)
-        (with-current-buffer gnus-article-buffer
-          (setq email-content (buffer-substring-no-properties (point-min) (point-max))))))
+      (if group
+          ;; Use group from org properties
+          (progn
+            (gnus)
+            (gnus-group-read-group nil t group)
+            (when (gnus-summary-goto-article message-id nil t)
+              (gnus-summary-select-article)
+              (with-current-buffer gnus-article-buffer
+                (setq email-content (buffer-substring-no-properties (point-min) (point-max))))))
+        ;; Fallback to old method
+        (gnus)
+        (when (and gnus-newsgroup-name
+                   (gnus-summary-goto-article message-id nil t))
+          (gnus-summary-select-article)
+          (with-current-buffer gnus-article-buffer
+            (setq email-content (buffer-substring-no-properties (point-min) (point-max)))))))
     (switch-to-buffer original-buffer)
     email-content))
 
