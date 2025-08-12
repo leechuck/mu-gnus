@@ -182,7 +182,7 @@ Respond in JSON: {{"category": "...", "urgency": "...", "sender_type": "..."}}
         classification_result = self.classify(prompt)
         
         # Output the full JSON result. This will be consumed by mail-process.
-        output_json = json.dumps(classification_result)
+        output_json = json.dumps(classification_result, separators=(',', ':'))
         print(output_json)
         
         return classification_result
