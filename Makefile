@@ -1,6 +1,6 @@
 # Makefile for the mail assistant project
 
-.PHONY: all test test-c test-python test-elisp test-llm install clean test-mail-process
+.PHONY: all test test-c test-python test-elisp test-llm install clean test-mail-process test-config
 
 # Variables
 CC = gcc
@@ -42,15 +42,23 @@ $(BUILDDIR)/mail-process: $(MAIL_PROCESS_SRC) $(CONFIG_OBJ)
 $(BUILDDIR)/mail-extract: $(MAIL_EXTRACT_SRC)
 	$(CC) $(CFLAGS) -o $@ $<
 
+# Rule for config test binary
+$(BUILDDIR)/test_config: tests/c/test_config.c $(CONFIG_OBJ)
+	$(CC) $(CFLAGS) -o $@ tests/c/test_config.c $(CONFIG_OBJ)
+
 # Test targets
 test: test-c test-python test-elisp test-llm
 	@echo "All tests finished."
 
-test-c: all
+test-c: all test-config
 	@echo "Running C tests..."
 	@if [ -f tests/c/run_tests.sh ]; then chmod +x tests/c/run_tests.sh && ./tests/c/run_tests.sh; fi
 	@if [ -f tests/c/test_mail_db.sh ]; then chmod +x tests/c/test_mail_db.sh && ./tests/c/test_mail_db.sh; fi
 	@if [ -f tests/c/test_mail_process.sh ]; then chmod +x tests/c/test_mail_process.sh && ./tests/c/test_mail_process.sh; fi
+
+test-config: $(BUILDDIR)/test_config
+	@echo "Running C config tests..."
+	@$(BUILDDIR)/test_config
 
 test-python:
 	@echo "Running Python tests (non-LLM)..."
