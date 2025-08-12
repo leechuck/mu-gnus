@@ -1,0 +1,34 @@
+Classify this email into ONE category:
+- important: requires action or response
+- newsletter: promotional, marketing, updates
+- social: personal, casual conversations  
+- automated: system notifications, receipts
+- spam: unwanted, suspicious
+
+Also extract:
+- urgency: high|medium|low
+- sender_type: person|company|system
+
+Email:
+From: {from}
+Subject: {subject}
+Body (first 1000 chars): {body}
+
+Respond in JSON: {"category": "...", "urgency": "...", "sender_type": "..."}
+Classify this email into ONE category:
+- important: requires action or response
+- newsletter: promotional, marketing, updates
+- social: personal, casual conversations  
+- automated: system notifications, receipts
+- spam: unwanted, suspicious
+
+Also extract:
+- urgency: high|medium|low
+- sender_type: person|company|system
+
+Email:
+From: {from}
+Subject: {subject}
+Body (first 1000 chars): {body}
+
+Respond in JSON: {"category": "...", "urgency": "...", "sender_type": "..."}

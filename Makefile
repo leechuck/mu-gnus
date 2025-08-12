@@ -44,7 +44,7 @@ test: all
 	@if [ -f tests/c/test_mail_db.sh ]; then chmod +x tests/c/test_mail_db.sh && ./tests/c/test_mail_db.sh; fi
 	@if [ -f tests/c/test_mail_process.sh ]; then chmod +x tests/c/test_mail_process.sh && ./tests/c/test_mail_process.sh; fi
 	@echo "Running Python tests..."
-	@if [ -f tests/python/test_classify.py ]; then cd tests/python && python3 test_classify.py; fi
+	@if [ -f tests/python/test_new_classify.py ]; then cd tests/python && python3 test_new_classify.py; fi
 	@if [ -f tests/python/test_mail_to_org.py ]; then cd tests/python && python3 test_mail_to_org.py; fi
 	@echo "Running Elisp tests..."
 	@if [ -f tests/elisp/test_mu_gnus.el ]; then \
