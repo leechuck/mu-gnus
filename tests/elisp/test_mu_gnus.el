@@ -2,6 +2,7 @@
 
 (require 'ert)
 (require 'json)
+(require 'cl-lib)
 
 ;; Load the file to be tested.
 (load-file (expand-file-name "../../elisp/mu-gnus.el" (file-name-directory load-file-name)))
@@ -14,13 +15,13 @@
         (json-array-type 'list)
         (json-object-type 'alist))
     (should (equal (mu-gnus-parse-db-json json-str)
-                   '(((:message_id . "<123@a.com>")
-                      (:from_addr . "a@b.com")
-                      (:subject . "subj")
-                      (:classification . "important")
-                      (:needs_reply . 1)
-                      (:replied . 0)
-                      (:date . 1672531200)))))))
+                   '(((message_id . "<123@a.com>")
+                      (from_addr . "a@b.com")
+                      (subject . "subj")
+                      (classification . "important")
+                      (needs_reply . 1)
+                      (replied . 0)
+                      (date . 1672531200)))))))
 
 (ert-deftest mu-gnus-parse-db-json-empty-test ()
   "Test parsing of an empty JSON array."
@@ -33,10 +34,10 @@
 
 (ert-deftest mu-gnus-format-reply-entry-test ()
   "Test formatting of a reply entry for display."
-  (let ((entry '((:message_id . "<id@host>")
-                 (:from_addr . "Test Sender <sender@example.com>")
-                 (:subject . "Test Subject")
-                 (:date . 1672531200)))) ; Corresponds to 2023-01-01 00:00:00 UTC
+  (let ((entry '((message_id . "<id@host>")
+                 (from_addr . "Test Sender <sender@example.com>")
+                 (subject . "Test Subject")
+                 (date . 1672531200)))) ; Corresponds to 2023-01-01 00:00:00 UTC
     (with-temp-buffer
       (let ((default-time-zone "UTC")) ; Set timezone for consistent test results
         (should (string= (mu-gnus-format-reply-entry entry)
