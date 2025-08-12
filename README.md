@@ -136,14 +136,92 @@ A unified client for interacting with LLMs. It can be used from the command line
 echo "What is the capital of France?" | python3 src/python/llm_client.py
 ```
 
-It supports multiple backends, configured via the `[llm]` section in `config.ini`:
-- `cmd`: Executes a local command.
-- `openai`: Connects to the OpenAI API.
-- `ollama`: Connects to a local Ollama instance.
-- `openrouter`: Connects to the OpenRouter API.
-- `gpt4all`: Connects to a local GPT4All instance.
+It supports multiple backends, configured via the `[llm]` section in `config.ini`. See `config.ini.example` for all options.
 
-See the `config.ini.example` file for configuration details.
+##### `cmd`
+
+Executes a local command. The prompt is passed via stdin, and the command's stdout is used as the response.
+
+- **type**: `cmd`
+- **command**: The shell command to execute.
+
+Example:
+```ini
+[llm]
+type = cmd
+command = echo '{"category": "test", "urgency": "low", "sender_type": "test"}'
+```
+
+##### `openai`
+
+Connects to the OpenAI API or any OpenAI-compatible endpoint.
+
+- **type**: `openai`
+- **api_key**: Your OpenAI API key.
+- **model**: The model to use (e.g., `gpt-4o`, `gpt-3.5-turbo`).
+- **api_url**: (Optional) The API endpoint. Defaults to the official OpenAI URL.
+
+Example:
+```ini
+[llm]
+type = openai
+api_key = sk-your-key-here
+model = gpt-4o
+```
+
+##### `ollama`
+
+Connects to a local [Ollama](https://ollama.com/) instance. You must have Ollama installed and running.
+
+1.  Install Ollama.
+2.  Pull a model: `ollama pull llama3`
+3.  Ensure the Ollama server is running.
+
+- **type**: `ollama`
+- **model**: The model you have pulled (e.g., `llama3`, `mistral`).
+- **api_url**: (Optional) The URL of your Ollama server. Defaults to `http://localhost:11434`.
+
+Example:
+```ini
+[llm]
+type = ollama
+model = llama3
+```
+
+##### `openrouter`
+
+Connects to the [OpenRouter](https://openrouter.ai/) API, which provides access to a wide variety of models.
+
+- **type**: `openrouter`
+- **api_key**: Your OpenRouter API key.
+- **model**: The model identifier from OpenRouter (e.g., `google/gemini-pro`, `openai/gpt-4o`).
+
+Example:
+```ini
+[llm]
+type = openrouter
+api_key = sk-or-your-key-here
+model = google/gemini-pro
+```
+
+##### `gpt4all`
+
+Connects to a local [GPT4All](https://gpt4all.io/) instance. You must have GPT4All installed and the API server enabled.
+
+1.  Install GPT4All.
+2.  Download a model within the GPT4All application.
+3.  Enable the API server in GPT4All's settings.
+
+- **type**: `gpt4all`
+- **model**: The model file name (e.g., `ggml-gpt4all-j-v1.3-groovy.bin`). The client will use the first available model if this is left blank.
+- **api_url**: (Optional) The URL of your GPT4All server. Defaults to `http://localhost:4891`.
+
+Example:
+```ini
+[llm]
+type = gpt4all
+model = ggml-gpt4all-j-v1.3-groovy.bin
+```
 
 #### mail-to-org.py
 
