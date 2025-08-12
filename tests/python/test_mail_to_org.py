@@ -221,7 +221,6 @@ Another regular line"""
         
         with patch.object(mail_to_org, 'datetime') as mock_datetime:
             mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
-            mock_datetime.now().strftime = datetime(2024, 1, 15, 12, 0, 0).strftime
             
             org_content = converter.convert_to_org(msg)
             self.assertIn("SCHEDULED: <2024-01-15 Mon>", org_content)
@@ -263,7 +262,6 @@ Another regular line"""
             
             with patch.object(mail_to_org, 'datetime') as mock_datetime:
                 mock_datetime.now.return_value = datetime(2024, 1, 15, 12, 0, 0)
-                mock_datetime.now().strftime = datetime(2024, 1, 15, 12, 0, 0).strftime
                 
                 org_content = converter.convert_to_org(msg)
                 
